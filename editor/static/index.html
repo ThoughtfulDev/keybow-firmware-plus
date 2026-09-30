@@ -21,10 +21,21 @@
         <button class="text-button" id="add-profile" type="button">Add</button>
       </div>
       <div class="profile-list" id="profile-list"></div>
+      <section class="firmware-panel" aria-labelledby="firmware-title">
+        <h2 id="firmware-title">Firmware</h2>
+        <p id="firmware-current">Connect Keybow to see its version.</p>
+        <p id="firmware-latest"></p>
+        <div class="firmware-actions">
+          <button id="check-firmware" type="button" class="text-button">Check updates</button>
+          <button id="install-firmware" type="button" class="secondary" disabled>Update</button>
+        </div>
+        <progress id="firmware-progress" max="100" value="0" hidden></progress>
+        <p id="firmware-message" role="status" aria-live="polite"></p>
+      </section>
       <p class="sidebar-note">Profiles are stored on Keybow. Saving the active profile applies it immediately.</p>
     </aside>
 
-    <main class="main">
+    <main class="main" id="main">
       <header class="topbar">
         <div>
           <h1 id="profile-title">Connect Keybow</h1>

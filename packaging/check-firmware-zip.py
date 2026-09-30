@@ -1,10 +1,14 @@
 """Check that the SD card ZIP is complete and has the expected root layout."""
 
 import hashlib
+import os
 import struct
 import sys
 from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "editor"))
+from keybow_editor.firmware_manifest import from_zip  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +27,8 @@ REQUIRED = {
     "LICENCE.broadcom",
     "COPYING.linux",
     "THIRD_PARTY_NOTICES.md",
+    "firmware-version",
+    "firmware-update.json",
 }
 
 
@@ -49,14 +55,22 @@ with ZipFile(ZIP) as archive:
     if archive.testzip() is not None:
         sys.exit("SD card ZIP failed its CRC check")
 
-    for name in ("kernel.img", "initrd"):
-        if digest(archive.read(entries[name])) != digest((ROOT / "sdcard" / name).read_bytes()):
-            sys.exit(f"{name} differs from the tracked SD card file")
+    for name, expected in (("kernel.img", ROOT / "sdcard/kernel.img"),
+                           ("initrd", ROOT / "build/initrd")):
+        if digest(archive.read(entries[name])) != digest(expected.read_bytes()):
+            sys.exit(f"{name} differs from the expected build file")
 
     executable = archive.read(entries["keybow"])
     if digest(executable) != digest((ROOT / "build/keybow").read_bytes()):
         sys.exit("ZIP does not contain the newly built keybow executable")
     if executable[:4] != b"\x7fELF" or struct.unpack_from("<H", executable, 18)[0] != 40:
         sys.exit("keybow is not an ARM ELF executable")
+    version = archive.read(entries["firmware-version"]).decode().strip()
+    expected = os.environ.get("KEYBOW_FIRMWARE_VERSION", "").removeprefix("firmware-v")
+    if expected and version != expected:
+        sys.exit("Firmware version does not match the release tag")
+    from_zip(archive, version)
+    if archive.read(entries["firmware-update.json"]) != (ROOT / "build/firmware-update.json").read_bytes():
+        sys.exit("Published update manifest differs from the ZIP manifest")
 
-print(f"Verified {ZIP.name}: {len(entries)} files, ARM executable, kernel and initrd")
+print(f"Verified {ZIP.name}: {len(entries)} files, ARM executable, update manifest and initrd")

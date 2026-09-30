@@ -409,6 +409,13 @@ int luaCheckSource(const char *source, size_t length) {
     return result != LUA_OK;
 }
 
+int luaUsingFallback(void) {
+    lua_getglobal(L, "keybow_profile_fallback");
+    int fallback = lua_toboolean(L, -1);
+    lua_pop(L, 1);
+    return fallback;
+}
+
 int luaReload(void) {
     lua_State *previous = L;
     lights_stop();

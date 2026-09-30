@@ -7,7 +7,7 @@ python=${PYTHON:-python3.12}
 venv="build/editor-venv-$arch"
 "$python" -m venv "$venv"
 "$venv/bin/python" -m pip install -r editor/requirements-desktop.txt
-"$venv/bin/python" -m unittest discover -s tests -p test_editor.py
+"$venv/bin/python" -m unittest discover -s tests -p 'test_*.py'
 "$venv/bin/python" -m PyInstaller --noconfirm --clean --windowed --onedir \
   --osx-bundle-identifier com.keybow.editor \
   --icon "$(pwd)/editor/assets/keybow-icon.icns" \

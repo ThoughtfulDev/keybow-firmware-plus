@@ -9,6 +9,7 @@
 - Use up to four layers with toggle, hold, or timed switching.
 - Set per-key colors or use the existing lighting patterns.
 - Choose US or German keyboard layouts for macOS, Windows, and Linux.
+- Install later runtime firmware releases over USB, with profile backups and boot rollback after the updater's one-time SD card upgrade.
 
 ## Get started
 

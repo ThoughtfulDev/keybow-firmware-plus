@@ -453,7 +453,12 @@ class EditorFlowTests(unittest.TestCase):
             self.assertFalse(request("GET", "/api/status")["layersReady"])
             self.assertIn("Install the layer SD card update",
                           request("PUT", "/api/profiles/german-test", current)["error"])
+            with server.UPDATE_LOCK:
+                server.UPDATE["running"] = True
+            self.assertIn("paused", request("PUT", "/api/profiles/german-test", current)["error"])
         finally:
+            with server.UPDATE_LOCK:
+                server.UPDATE["running"] = False
             server.DEVICE = original
 
     @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")

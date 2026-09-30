@@ -10,7 +10,10 @@ import zlib
 
 MAGIC = b"KBW1"
 MAX_PAYLOAD = 16384
-COMMANDS = {"ping": 1, "list": 2, "read": 3, "write": 4, "activate": 5, "delete": 6}
+COMMANDS = {"ping": 1, "list": 2, "read": 3, "write": 4, "activate": 5, "delete": 6,
+            "update_info": 7, "update_begin": 8, "update_query": 9,
+            "update_chunk": 10, "update_verify": 11, "update_apply": 12,
+            "update_reset": 13}
 ERRORS = {
     1: "Invalid profile or request",
     2: "Profile not found",
@@ -137,10 +140,13 @@ class Device:
             raise DeviceError(errors[0])
         raise DeviceError("No compatible Keybow found. " + "; ".join(errors))
 
-    def request(self, command, payload=b""):
+    def request(self, command, payload=b"", timeout=None):
         with self.lock:
             self._connect()
+            old_timeout = self.port.timeout if timeout is not None else None
             try:
+                if timeout is not None:
+                    self.port.timeout = timeout
                 return exchange(self.port, COMMANDS[command], payload)
             except DeviceError as exc:
                 if "rejected" not in str(exc) and str(exc) not in ERRORS.values():
@@ -149,3 +155,6 @@ class Device:
             except (OSError, serial.SerialException) as exc:
                 self.close()
                 raise serial_error(exc) from exc
+            finally:
+                if self.port and timeout is not None:
+                    self.port.timeout = old_timeout

@@ -1,6 +1,7 @@
 #include "profiles.h"
 #include "lua-config.h"
 #include "serial.h"
+#include "updater.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -113,6 +114,15 @@ static void handle(unsigned char command, const unsigned char *payload, size_t l
     char current[33];
     size_t result_length = 0;
     unsigned char status = OK;
+
+    if (update_handle(command, payload, length, result, &result_length, &status)) {
+        respond(command, status, status == OK ? result : NULL, status == OK ? result_length : 0);
+        return;
+    }
+    if (update_busy() && (command == WRITE || command == ACTIVATE || command == DELETE)) {
+        respond(command, IO_ERROR, NULL, 0);
+        return;
+    }
 
     switch (command) {
     case PING:

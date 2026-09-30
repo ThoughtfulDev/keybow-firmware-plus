@@ -15,7 +15,7 @@ fi
 venv=build/editor-venv-linux
 "$python" -m venv --system-site-packages "$venv"
 "$venv/bin/python" -m pip install -r editor/requirements-desktop.txt
-"$venv/bin/python" -m unittest discover -s tests -p test_editor.py
+"$venv/bin/python" -m unittest discover -s tests -p 'test_*.py'
 "$venv/bin/python" -m PyInstaller --noconfirm --clean --windowed --onedir --collect-all webview \
   --name keybow-editor --distpath build/editor-dist-linux \
   --workpath build/editor-work-linux --specpath build \

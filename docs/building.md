@@ -12,13 +12,13 @@ Install Docker and `zip`, then run:
 ./build-docker.sh
 ```
 
-The script builds the bundled C sources and dependencies with an ARMv6-compatible cross toolchain. It writes `build/keybow` and the complete `build/keybow-sdcard.zip`. The ZIP includes the `sdcard/` contents at its root, including boot files, `initrd`, Lua layouts, and patterns. Docker compiles the `keybow` executable; it packages the existing boot files and `initrd` without rebuilding them. Follow the [firmware update guide](firmware-update.md) to put the result on a card.
+The script builds the bundled C sources and dependencies with an ARMv6-compatible cross toolchain. It writes `build/keybow`, a repacked `build/initrd`, and the complete `build/keybow-sdcard.zip`. The ZIP includes the `sdcard/` contents at its root, including boot files, Lua layouts, and patterns. Docker adds the update recovery scripts to the bundled `initrd`; it does not rebuild the kernel or Raspberry Pi boot binaries. It also writes a versioned, checksummed runtime manifest for USB updates. Local builds default to version `0.0.0`; set `KEYBOW_FIRMWARE_VERSION=0.0.1` for a versioned local package. Follow the [firmware update guide](firmware-update.md) for the one-time card upgrade and later USB updates.
 
-Pushing a tag such as `firmware-v1.0.0` runs the [firmware release workflow](../.github/workflows/firmware-release.yml) on an Ubuntu runner. It builds the SD card ZIP with Docker, checks the executable and required files, then attaches `keybow-firmware-plus-firmware-v1.0.0-sdcard.zip` to a [GitHub Release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases). After the commit to release is on the remote branch:
+Pushing a tag such as `firmware-v0.0.1` runs the [firmware release workflow](../.github/workflows/firmware-release.yml) on an Ubuntu runner. It builds the SD card ZIP with Docker, checks the executable and required files, then attaches `keybow-firmware-plus-firmware-v0.0.1-sdcard.zip` and its `-update.json` manifest to a [GitHub Release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases). The editor recognizes firmware releases that contain both assets. After the commit to release is on the remote branch:
 
 ```sh
-git tag firmware-v1.0.0
-git push origin firmware-v1.0.0
+git tag firmware-v0.0.1
+git push origin firmware-v0.0.1
 ```
 
 Firmware tags use `firmware-vMAJOR.MINOR.PATCH`; desktop editor tags use `vMAJOR.MINOR.PATCH` and run a separate workflow.
@@ -27,11 +27,11 @@ Firmware tags use `firmware-vMAJOR.MINOR.PATCH`; desktop editor tags use `vMAJOR
 
 Build on each target operating system and architecture. Each script runs the Python editor tests and needs internet access once to install pinned build dependencies. [PyInstaller builds on the target OS](https://pyinstaller.org/en/latest/usage.html). Packages include Python and app code; users do not install Python separately.
 
-Pushing a version tag such as `v1.2.3` runs the [desktop release workflow](../.github/workflows/desktop-release.yml). It builds both Mac DMGs, a Windows x64 ZIP, and an Ubuntu 24.04 x64 DEB, then attaches all four to a [GitHub Release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases) after every build succeeds. For example, after the commit to release is on the remote branch:
+Pushing a version tag such as `v0.0.1` runs the [desktop release workflow](../.github/workflows/desktop-release.yml). It builds both Mac DMGs, a Windows x64 ZIP, and an Ubuntu 24.04 x64 DEB, then attaches all four to a [GitHub Release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases) after every build succeeds. For example, after the commit to release is on the remote branch:
 
 ```sh
-git tag v1.2.3
-git push origin v1.2.3
+git tag v0.0.1
+git push origin v0.0.1
 ```
 
 Tags must use `vMAJOR.MINOR.PATCH`. The Ubuntu DEB version is derived from the tag without `v`. The workflow uses GitHub's token and does not require a locally authenticated `gh` CLI. These desktop packages are unsigned; the workflow does not build or publish the SD card firmware ZIP. The local scripts below remain available.
