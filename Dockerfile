@@ -40,5 +40,17 @@ RUN cd libusbgx \
 
 RUN make -C keybow
 
+FROM debian:bookworm-slim AS initrd
+RUN apt-get update && apt-get install -y --no-install-recommends cpio xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+COPY sdcard/initrd /original-initrd
+COPY packaging/initrd/ /overlay/
+RUN mkdir /tree && cd /tree \
+    && xz -dc /original-initrd | cpio -idm --quiet \
+    && cp /overlay/init /overlay/update-install.sh /overlay/update-watchdog.sh /tree/ \
+    && chmod 755 /tree/init /tree/update-install.sh /tree/update-watchdog.sh \
+    && find . -print0 | cpio --null -o -H newc --quiet | xz --check=crc32 -9e > /updated-initrd
+
 FROM scratch
 COPY --from=build /src/keybow/keybow /keybow
+COPY --from=initrd /updated-initrd /initrd

@@ -5,9 +5,17 @@ const PRESET_LIGHTS = ["#35a9c1", "#8ab6e3", "#b995d4", "#e6b680", "#86b8a5", "#
 const state = {
   connected: false, layersReady: false, options: null, ports: [], selectedPort: null, ids: [], names: {}, active: null,
   profile: null, layerId: "base", selected: 0, dirty: false, lastColors: null, colorHsv: null, colorKey: null,
+  updating: false, firmware: null, latest: null,
 };
 
 function layer() { return state.profile?.layers.find((item) => item.id === state.layerId); }
+function newerFirmware(latest, installed) {
+  if (!latest || !installed) return false;
+  if (installed === "unknown") return true;
+  const left = latest.split(".").map(Number), right = installed.split(".").map(Number);
+  for (let i = 0; i < 3; i++) if (left[i] !== right[i]) return left[i] > right[i];
+  return false;
+}
 function reservedFor(index, layerId = state.layerId) {
   return state.profile?.layers.filter((item) => item.id !== layerId &&
     item.keys[index].kind === "layer" && item.keys[index].mode === "toggle" &&
@@ -190,6 +198,12 @@ function invalidColor(message, fields) {
 }
 
 function render() {
+  $("profile-list").inert = state.updating;
+  $("serial-port").disabled = state.updating;
+  $("refresh-ports").disabled = state.updating;
+  $("main").inert = state.updating;
+  $("install-firmware").disabled = state.updating || !state.connected || !state.firmware?.supported ||
+    !state.latest || !newerFirmware(state.latest.version, state.firmware.version);
   $("device-status").textContent = state.connected ? "Connected over USB" : "Keybow is disconnected";
   $("device-status").classList.toggle("online", state.connected);
   $("profile-title").textContent = state.profile ? state.profile.name : "Connect Keybow";
@@ -278,7 +292,79 @@ async function startup() {
     tell(status.message || "Connect Keybow and refresh this page.", true);
   }
   render();
+  await refreshFirmware();
 }
+
+async function refreshFirmware() {
+  if (!state.connected) {
+    state.firmware = null;
+    $("firmware-current").textContent = "Connect Keybow to see its version.";
+    render();
+    return;
+  }
+  try {
+    state.firmware = await api("/api/firmware");
+    $("firmware-current").textContent = state.firmware.supported
+      ? `Installed: ${state.firmware.version}${state.firmware.state === "idle" ? "" : ` · ${state.firmware.state}`}`
+      : "One-time SD card upgrade required.";
+  } catch (error) {
+    $("firmware-current").textContent = error.message;
+  }
+  render();
+}
+
+$("check-firmware").addEventListener("click", async () => {
+  $("firmware-message").textContent = "Checking GitHub releases…";
+  try {
+    await refreshFirmware();
+    if (!state.firmware?.supported) throw new Error("Install the one-time SD card upgrade first.");
+    state.latest = await api("/api/firmware/latest");
+    $("firmware-latest").textContent = `Latest: ${state.latest.version}`;
+    $("firmware-message").textContent = newerFirmware(state.latest.version, state.firmware.version)
+      ? "A firmware update is available." : "Keybow is up to date.";
+    render();
+  } catch (error) { $("firmware-message").textContent = error.message; }
+});
+
+$("install-firmware").addEventListener("click", async () => {
+  if (state.dirty && !confirm("Discard unsaved profile changes and update? Cancel to save them first.")) return;
+  if (!confirm(`Install firmware ${state.latest.version}? Keybow will restart. Saved profiles will be backed up.`)) return;
+  state.updating = true;
+  $("firmware-progress").hidden = false;
+  $("firmware-progress").value = 0;
+  $("firmware-message").textContent = "Starting update…";
+  render();
+  try {
+    await api("/api/firmware/update", { method: "POST", body: JSON.stringify({ tag: state.latest.tag }) });
+    const timer = setInterval(async () => {
+      try {
+        const job = await api("/api/firmware/job");
+        $("firmware-progress").value = job.percent;
+        $("firmware-message").textContent = job.error || `${job.phase}${job.backup ? ` · Backup: ${job.backup}` : ""}`;
+        if (!job.running) {
+          clearInterval(timer);
+          state.updating = false;
+          state.dirty = false;
+          await startup();
+          if (job.error) $("firmware-message").textContent = `${job.error}${job.backup ? ` · Backup: ${job.backup}` : ""}`;
+          else $("firmware-message").textContent = `Firmware updated. Profile backup: ${job.backup}`;
+          $("firmware-progress").hidden = true;
+          render();
+        }
+      } catch (error) {
+        clearInterval(timer);
+        state.updating = false;
+        $("firmware-message").textContent = error.message;
+        render();
+      }
+    }, 1000);
+  } catch (error) {
+    state.updating = false;
+    $("firmware-message").textContent = error.message;
+    $("firmware-progress").hidden = true;
+    render();
+  }
+});
 
 async function loadOptions(layout) {
   state.options = await api(`/api/options?layout=${layout}`);

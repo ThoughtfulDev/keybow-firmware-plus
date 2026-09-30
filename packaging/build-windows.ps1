@@ -7,7 +7,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not create Python environment' }
 $venv = 'build\editor-venv-win\Scripts\python.exe'
 & $venv -m pip install -r editor\requirements-desktop.txt
 if ($LASTEXITCODE -ne 0) { throw 'Dependency install failed' }
-& $venv -m unittest discover -s tests -p test_editor.py
+& $venv -m unittest discover -s tests -p 'test_*.py'
 if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
 & $venv -m PyInstaller --noconfirm --clean --windowed --onedir --name KeybowEditor --collect-all webview `
   --icon "$(Resolve-Path editor\assets\keybow-icon.ico)" `

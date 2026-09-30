@@ -25,15 +25,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip unzip
       - name: Build the complete SD card ZIP
+        env:
+          KEYBOW_FIRMWARE_VERSION: ${{ github.ref_name }}
         run: ./build-docker.sh
       - name: Verify SD card ZIP
+        env:
+          KEYBOW_FIRMWARE_VERSION: ${{ github.ref_name }}
         run: python3 packaging/check-firmware-zip.py
       - name: Name firmware ZIP for the tag
-        run: cp build/keybow-sdcard.zip "build/keybow-firmware-plus-${GITHUB_REF_NAME}-sdcard.zip"
+        run: |
+          cp build/keybow-sdcard.zip "build/keybow-firmware-plus-${GITHUB_REF_NAME}-sdcard.zip"
+          cp build/firmware-update.json "build/keybow-firmware-plus-${GITHUB_REF_NAME}-update.json"
       - uses: actions/upload-artifact@v7
         with:
           name: firmware-sdcard
-          path: build/keybow-firmware-plus-firmware-v*-sdcard.zip
+          path: |
+            build/keybow-firmware-plus-firmware-v*-sdcard.zip
+            build/keybow-firmware-plus-firmware-v*-update.json
           if-no-files-found: error
 
   release:
@@ -46,10 +54,11 @@ jobs:
         with:
           name: firmware-sdcard
           path: release-assets
-      - name: Require the complete firmware ZIP
+      - name: Require the complete firmware package
         run: |
           test -s "release-assets/keybow-firmware-plus-${GITHUB_REF_NAME}-sdcard.zip"
-          test "$(find release-assets -maxdepth 1 -type f | wc -l | tr -d ' ')" = 1
+          test -s "release-assets/keybow-firmware-plus-${GITHUB_REF_NAME}-update.json"
+          test "$(find release-assets -maxdepth 1 -type f | wc -l | tr -d ' ')" = 2
       - name: Create or update firmware Release
         env:
           GH_TOKEN: ${{ github.token }}

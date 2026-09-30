@@ -8,7 +8,8 @@
 .github/
 editor/
 tests/
-sdcard/
+sdcard/*
+!sdcard/initrd
 README.md
 run-editor.sh
 build-docker.sh

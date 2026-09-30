@@ -3,10 +3,12 @@
 #include "gadget-hid.h"
 #include "lights.h"
 #include "profiles.h"
+#include "updater.h"
 
 #include <bcm2835.h>
 #include <signal.h>
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
 
 int running = 0;
@@ -63,6 +65,7 @@ void resetKeyState(void) {
 int main() {
     int ret;
     chdir(KEYBOW_HOME);
+    int update_boot = access(".keybow-update/pending", F_OK) == 0;
 
     add_key(RPI_V2_GPIO_P1_11, 0x27, 3);
     add_key(RPI_V2_GPIO_P1_13, 0x37, 7);
@@ -111,14 +114,26 @@ int main() {
     running = 1;
     signal(SIGINT, signal_handler);
 
-    luaCallSetup();
+    if (luaCallSetup() != 0 || (update_boot && luaUsingFallback())) return 1;
 
     lights_start();
+
+    time_t ready_after = time(NULL) + 5;
+    int marked_ready = 0;
 
     while (running){
         profiles_poll();
         luaTick();
         updateKeys();
+        update_poll_reboot();
+        if (update_boot && !marked_ready && time(NULL) >= ready_after) {
+            FILE *ready = fopen(".keybow-update/ready", "wb");
+            if (ready) {
+                if (fwrite("ready\n", 1, 6, ready) == 6 && !fflush(ready) && !fsync(fileno(ready)))
+                    marked_ready = 1;
+                fclose(ready);
+            }
+        }
         usleep(1000);
     }
 

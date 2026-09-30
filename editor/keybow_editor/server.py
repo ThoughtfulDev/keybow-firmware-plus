@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 import re
+import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 import webbrowser
@@ -12,6 +13,7 @@ import webbrowser
 from .layouts import LAYOUTS, characters, host_layout, translate
 from .profile import MEDIA, PRESETS, default_profile, generate_lua, key_options, parse_lua, upgrade, validate
 from .protocol import Device, DeviceError
+from . import firmware_update
 
 STATIC = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "static"
 DEVICE = Device()
@@ -20,6 +22,30 @@ MARKER_ID = "layer-loader"
 marker_profile = default_profile()
 marker_profile.update(id=MARKER_ID, name="Layer loader support")
 MARKER_SOURCE = generate_lua(marker_profile).encode("utf-8")
+UPDATE_LOCK = threading.Lock()
+UPDATE = {"running": False, "phase": "idle", "percent": 0, "backup": None, "error": None}
+
+
+def update_progress(phase, percent, backup=None):
+    with UPDATE_LOCK:
+        UPDATE.update(phase=phase, percent=percent)
+        if backup:
+            UPDATE["backup"] = backup
+
+
+def update_worker(release):
+    try:
+        backup = firmware_update.install(DEVICE, release, update_progress)
+        with UPDATE_LOCK:
+            UPDATE.update(running=False, phase="complete", percent=100, backup=backup)
+    except Exception as exc:
+        with UPDATE_LOCK:
+            UPDATE.update(running=False, phase="failed", error=str(exc))
+
+
+def update_running():
+    with UPDATE_LOCK:
+        return UPDATE["running"]
 
 
 def layers_ready():
@@ -81,6 +107,16 @@ class Handler(SimpleHTTPRequestHandler):
             elif path == "/api/ports":
                 self.json_response({"ports": DEVICE.ports(),
                                     "selected": getattr(DEVICE, "selected_port", None)})
+            elif path == "/api/firmware":
+                try:
+                    self.json_response({"supported": True, **firmware_update.device_info(DEVICE)})
+                except DeviceError as exc:
+                    self.json_response({"supported": False, "message": str(exc)})
+            elif path == "/api/firmware/latest":
+                self.json_response(firmware_update.latest_release())
+            elif path == "/api/firmware/job":
+                with UPDATE_LOCK:
+                    self.json_response(UPDATE.copy())
             elif path == "/api/template":
                 profile = upgrade(default_profile())
                 profile["layout"] = host_layout()
@@ -116,6 +152,24 @@ class Handler(SimpleHTTPRequestHandler):
             return
         path = urlsplit(self.path).path
         try:
+            if method == "post" and path == "/api/firmware/update":
+                tag = self.body_json().get("tag")
+                if not isinstance(tag, str) or not firmware_update.TAG.fullmatch(tag):
+                    raise ValueError("Invalid firmware release tag")
+                with UPDATE_LOCK:
+                    if UPDATE["running"]:
+                        raise ValueError("A firmware update is already running")
+                release = firmware_update.latest_release()
+                if release["tag"] != tag:
+                    raise ValueError("A newer firmware release is available; check updates again")
+                firmware_update.device_info(DEVICE)
+                with UPDATE_LOCK:
+                    UPDATE.update(running=True, phase="Starting", percent=0, backup=None, error=None)
+                threading.Thread(target=update_worker, args=(release,), daemon=True).start()
+                self.json_response({"started": tag})
+                return
+            if update_running():
+                raise ValueError("Profile editing is paused while firmware updates")
             if method == "put" and (match := ID_PATH.fullmatch(path)):
                 if match.group(1) == MARKER_ID:
                     raise ValueError("This ID is reserved for the layer loader")
