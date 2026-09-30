@@ -16,9 +16,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Build with shell trace
+      - name: Build using release packaging script
         env:
           PYTHON: python
-        run: bash -x packaging/build-macos.sh
+        run: ./packaging/build-macos.sh
       - name: Verify image
         run: hdiutil verify build/keybow-editor-macos-arm64.dmg
