@@ -4,15 +4,15 @@
 
 Install the [one-time SD card firmware update](firmware-update.md) before saving profiles from the editor. The editor runs locally on your computer and communicates with Keybow through USB serial. The packages include Python and the editor code; you do not need to install Python to use them.
 
-This project currently provides local build scripts, not hosted releases. Build a package on its target operating system using the [build guide](building.md), or use a package built from this repository on that system.
+For a tagged version, download the package for your operating system from the [GitHub Releases page](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases). You can also [build a package locally](building.md) on its target operating system. Both release and local packages are unsigned.
 
 ## macOS
 
-Open `keybow-editor-macos-arm64.dmg` on Apple Silicon or `keybow-editor-macos-x86_64.dmg` on an Intel Mac. Drag **Keybow Editor.app** onto the **Applications** shortcut, eject the disk image, and open the app from Applications. The local builds are unsigned, so macOS may ask you to approve opening the app.
+Open `keybow-editor-macos-arm64.dmg` on Apple Silicon or `keybow-editor-macos-x86_64.dmg` on an Intel Mac. Drag **Keybow Editor.app** onto the **Applications** shortcut, eject the disk image, and open the app from Applications. The app is unsigned, so macOS may ask you to approve opening it.
 
 ## Windows 10/11 x64
 
-Extract `keybow-editor-windows-x64.zip` and run `KeybowEditor.exe` inside the extracted folder. Keep the folder together. The app needs [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) and explains how to install it if missing. The local build is unsigned, so Windows may ask you to approve opening it.
+Extract `keybow-editor-windows-x64.zip` and run `KeybowEditor.exe` inside the extracted folder. Keep the folder together. The app needs [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) and explains how to install it if missing. The app is unsigned, so Windows may ask you to approve opening it.
 
 ## Ubuntu 22.04/24.04 x64
 

@@ -1,0 +1,152 @@
+name: Build desktop release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Validate version tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'Expected a tag such as v1.2.3' >&2
+            exit 1
+          fi
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+  macos:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Build DMG and run editor tests
+        env:
+          PYTHON: python
+        run: ./packaging/build-macos.sh
+      - name: Verify DMG contents
+        shell: bash
+        run: |
+          image="build/keybow-editor-macos-${{ matrix.arch }}.dmg"
+          hdiutil verify "$image"
+          mountpoint=$(mktemp -d)
+          hdiutil attach -quiet -readonly -nobrowse -mountpoint "$mountpoint" "$image"
+          test -d "$mountpoint/Keybow Editor.app"
+          test -L "$mountpoint/Applications"
+          test -s "$mountpoint/Keybow Editor.app/Contents/Resources/ThirdPartyNotices.md"
+          hdiutil detach -quiet "$mountpoint"
+          rmdir "$mountpoint"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-macos-${{ matrix.arch }}
+          path: build/keybow-editor-macos-${{ matrix.arch }}.dmg
+          if-no-files-found: error
+
+  windows:
+    needs: validate
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Build Windows ZIP and run editor tests
+        shell: pwsh
+        env:
+          PYTHON: python
+        run: .\packaging\build-windows.ps1
+      - name: Verify Windows ZIP contents
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression
+          $zip = [System.IO.Compression.ZipFile]::OpenRead('build\keybow-editor-windows-x64.zip')
+          try {
+            $names = $zip.Entries.FullName | ForEach-Object { $_ -replace '\\', '/' }
+            if (-not ($names -match '(^|/)KeybowEditor\.exe$')) { throw 'KeybowEditor.exe is missing from the ZIP' }
+            if (-not ($names -match '(^|/)THIRD_PARTY_NOTICES\.md$')) { throw 'Third-party notices are missing from the ZIP' }
+          } finally {
+            $zip.Dispose()
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-windows-x64
+          path: build/keybow-editor-windows-x64.zip
+          if-no-files-found: error
+
+  ubuntu:
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install GTK and Python build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+      - name: Build DEB and run editor tests
+        env:
+          PYTHON: /usr/bin/python3
+          KEYBOW_VERSION: ${{ needs.validate.outputs.version }}
+        run: ./packaging/build-ubuntu.sh
+      - name: Verify DEB metadata and contents
+        env:
+          KEYBOW_VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          deb=build/keybow-editor-ubuntu-x64.deb
+          test "$(dpkg-deb --field "$deb" Version)" = "$KEYBOW_VERSION"
+          dpkg-deb --contents "$deb" | grep -q '/opt/keybow-editor/keybow-editor$'
+          dpkg-deb --contents "$deb" | grep -q '/usr/share/doc/keybow-editor/THIRD_PARTY_NOTICES.md$'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-ubuntu-x64
+          path: build/keybow-editor-ubuntu-x64.deb
+          if-no-files-found: error
+
+  release:
+    needs: [validate, macos, windows, ubuntu]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: desktop-*
+          merge-multiple: true
+          path: release-assets
+      - name: Require all four packages
+        run: |
+          test -s release-assets/keybow-editor-macos-arm64.dmg
+          test -s release-assets/keybow-editor-macos-x86_64.dmg
+          test -s release-assets/keybow-editor-windows-x64.zip
+          test -s release-assets/keybow-editor-ubuntu-x64.deb
+          test "$(find release-assets -maxdepth 1 -type f | wc -l | tr -d ' ')" = 4
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" release-assets/* --verify-tag --generate-notes
+          fi

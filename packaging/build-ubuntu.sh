@@ -7,6 +7,11 @@ cd "$(dirname "$0")/.."
 gtk_package=libgtk-3-0
 [ "$VERSION_ID" = 24.04 ] && gtk_package=libgtk-3-0t64
 python=${PYTHON:-python3}
+version=${KEYBOW_VERSION:-1.0.0}
+if ! printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo 'KEYBOW_VERSION must be MAJOR.MINOR.PATCH' >&2
+  exit 1
+fi
 venv=build/editor-venv-linux
 "$python" -m venv --system-site-packages "$venv"
 "$venv/bin/python" -m pip install -r editor/requirements-desktop.txt
@@ -22,11 +27,11 @@ mkdir -p "$pkg/DEBIAN" "$pkg/opt/keybow-editor" "$pkg/usr/bin" "$pkg/usr/share/a
 cp -R build/editor-dist-linux/keybow-editor/. "$pkg/opt/keybow-editor/"
 install -m 644 THIRD_PARTY_NOTICES.md "$pkg/usr/share/doc/keybow-editor/THIRD_PARTY_NOTICES.md"
 install -m 644 editor/LICENSE "$pkg/usr/share/doc/keybow-editor/KeybowEditorLicense.txt"
-python_prefix=$("$venv/bin/python" -c 'import sys; print(sys.base_prefix)')
-install -m 644 "$python_prefix/LICENSE" "$pkg/usr/share/doc/keybow-editor/PythonLicense.txt"
+python_license=$("$venv/bin/python" packaging/python-license-path.py)
+install -m 644 "$python_license" "$pkg/usr/share/doc/keybow-editor/PythonLicense.txt"
 cat > "$pkg/DEBIAN/control" <<EOF
 Package: keybow-editor
-Version: 1.0.0
+Version: $version
 Section: utils
 Priority: optional
 Architecture: amd64

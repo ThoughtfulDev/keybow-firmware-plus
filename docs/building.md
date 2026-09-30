@@ -18,6 +18,15 @@ The script builds the bundled C sources and dependencies with an ARMv6-compatibl
 
 Build on each target operating system and architecture. Each script runs the Python editor tests and needs internet access once to install pinned build dependencies. [PyInstaller builds on the target OS](https://pyinstaller.org/en/latest/usage.html). Packages include Python and app code; users do not install Python separately.
 
+Pushing a version tag such as `v1.2.3` runs the [desktop release workflow](../.github/workflows/desktop-release.yml). It builds both Mac DMGs, a Windows x64 ZIP, and an Ubuntu 24.04 x64 DEB, then attaches all four to a [GitHub Release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases) after every build succeeds. For example, after the commit to release is on the remote branch:
+
+```sh
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+Tags must use `vMAJOR.MINOR.PATCH`. The Ubuntu DEB version is derived from the tag without `v`. The workflow uses GitHub's token and does not require a locally authenticated `gh` CLI. These desktop packages are unsigned; the workflow does not build or publish the SD card firmware ZIP. The local scripts below remain available.
+
 ### macOS Apple Silicon or Intel
 
 Install Python 3.12 and Xcode command line tools, then run on the Mac matching the architecture you want:
@@ -47,7 +56,7 @@ sudo apt install python3-venv python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-
 ./packaging/build-ubuntu.sh
 ```
 
-The output is `build/keybow-editor-ubuntu-x64.deb`.
+The output is `build/keybow-editor-ubuntu-x64.deb`. The package version defaults to `1.0.0` for a local build; set `KEYBOW_VERSION=1.2.3` before the script to assign another version.
 
 The app icon source and converted macOS, Windows, and Ubuntu assets are in `editor/assets/`. Normal builds need no image conversion tools. To regenerate them after changing the source icon, run `./packaging/generate-icons.sh` on a Mac with ImageMagick installed.
 
