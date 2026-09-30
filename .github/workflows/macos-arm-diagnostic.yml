@@ -1,0 +1,24 @@
+name: Diagnose Apple Silicon DMG build
+
+on:
+  push:
+    branches:
+      - codex/fix-macos-arm-ci
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Build with shell trace
+        env:
+          PYTHON: python
+        run: bash -x packaging/build-macos.sh
+      - name: Verify image
+        run: hdiutil verify build/keybow-editor-macos-arm64.dmg
