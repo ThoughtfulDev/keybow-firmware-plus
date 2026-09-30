@@ -6,17 +6,17 @@ The USB editor and layer loader need a **one-time SD card update** on the 12-key
 
 ## Prepare the SD card package
 
-From the repository root, build the firmware and complete SD card ZIP with Docker and `zip`:
+Download a tagged firmware ZIP from [GitHub Releases](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases), or build the complete SD card ZIP locally with Docker and `zip` from the repository root:
 
 ```sh
 ./build-docker.sh
 ```
 
-The result, `build/keybow-sdcard.zip`, contains the files that belong at the **root** of a FAT32 micro-SD card: boot files, `initrd`, Lua files, lighting patterns, and the newly built `keybow` executable. Do not copy only the `.bin` or `keybow` executable to a new card. The [build guide](building.md) explains what the Docker build does and does not rebuild.
+The downloaded firmware ZIP or local `build/keybow-sdcard.zip` contains the files that belong at the **root** of a FAT32 micro-SD card: boot files, `initrd`, Lua files, lighting patterns, and the newly built `keybow` executable. Do not copy only the `.bin` or `keybow` executable to a new card. The [build guide](building.md) explains what the Docker build does and does not rebuild.
 
 ## New card or original firmware
 
-Format a micro-SD card as FAT32. Extract the **contents** of `build/keybow-sdcard.zip` directly to the card root, not into an extra folder. Eject the card, insert it in Keybow, then connect Keybow over USB. The original Pimoroni release ZIP is for the original firmware and does not include this fork's USB editor features.
+Format a micro-SD card as FAT32. Extract the **contents** of the firmware ZIP directly to the card root, not into an extra folder. Eject the card, insert it in Keybow, then connect Keybow over USB. The original Pimoroni release ZIP is for the original firmware and does not include this fork's USB editor features.
 
 ## Card already running this fork's USB editor firmware
 
