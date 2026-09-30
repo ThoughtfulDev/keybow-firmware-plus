@@ -1,26 +1,35 @@
 ![Keybow Firmware Plus banner with a lit 12-key Keybow](docs/images/keybow-banner.webp)
 
----
+**Keybow Firmware Plus** is a fork of [Pimoroni's original Keybow firmware](https://github.com/pimoroni/keybow-firmware) for the **12-key Keybow**. It adds a desktop editor for keys, layers, profiles, and lighting, plus USB firmware updates after a one-time SD card upgrade. These additions have not been verified on Keybow MINI.
 
-**Keybow Firmware Plus** is a fork of [Pimoroni's original Keybow firmware](https://github.com/pimoroni/keybow-firmware). It adds a desktop editor and USB profile updates for the **12-key Keybow**, so you can change keys, layers, and lighting without removing the SD card after the initial firmware update. These additions have not been verified on Keybow MINI.
+## Install
 
-- Edit named profiles on macOS, Windows, or Ubuntu; profiles are stored on Keybow's SD card.
-- Assign keyboard shortcuts, media controls, or no action to each key.
-- Use up to four layers with toggle, hold, or timed switching.
-- Set per-key colors or use the existing lighting patterns.
-- Choose US or German keyboard layouts for macOS, Windows, and Linux.
-- Install later runtime firmware releases over USB, with profile backups and boot rollback after the updater's one-time SD card upgrade.
+1. Download the SD card ZIP from the [`firmware-v0.0.1` release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/firmware-v0.0.1). Back up your card and follow the [one-time firmware installation guide](docs/firmware-update.md).
+2. Download the app for your computer from the [`v0.0.1` editor release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/v0.0.1):
 
-## Get started
+   | Computer | Download | Install |
+   | --- | --- | --- |
+   | Mac, Apple Silicon | `keybow-editor-macos-arm64.dmg` | Open the DMG and drag the app to Applications. Then run the command below. |
+   | Mac, Intel | `keybow-editor-macos-x86_64.dmg` | Open the DMG and drag the app to Applications. Then run the command below. |
+   | Windows 10/11 x64 | `keybow-editor-windows-x64.zip` | Extract the ZIP and run `KeybowEditor.exe` from its folder. |
+   | Ubuntu 22.04/24.04 x64 | `keybow-editor-ubuntu-x64.deb` | Install with `sudo apt install ./keybow-editor-ubuntu-x64.deb`. |
 
-1. [Install the one-time Keybow firmware update](docs/firmware-update.md).
-2. [Install the desktop editor](docs/installation.md).
-3. [Edit profiles and lighting](docs/usage.md).
+   On macOS, remove the unsigned app's quarantine attribute after copying it to Applications and before opening it:
 
-For local firmware and desktop package builds, see [Building](docs/building.md).
+   ```sh
+   xattr -dr com.apple.quarantine "/Applications/Keybow Editor.app"
+   ```
+
+3. Connect Keybow with a USB **data** cable and open the editor. Profiles are saved on Keybow, so they appear when you connect it to another computer with the editor installed.
+
+See [installation details](docs/installation.md) for platform requirements and connection help, or [editor usage](docs/usage.md) to set up keys, layers, and colors. Later runtime firmware releases can be installed from the editor's **Firmware** section; editor app updates are separate downloads.
+
+## For developers
+
+[Development setup](docs/development.md) · [Build packages](docs/building.md) · [Coding guidelines](docs/coding-guidelines.md)
 
 <details>
-<summary>See editor screenshots</summary>
+<summary>Editor screenshots</summary>
 
 ### Profile and device view
 
@@ -38,4 +47,4 @@ Screenshots use a simulated demo profile; no connected Keybow profile was change
 
 </details>
 
-The original hardware and software guides remain available on [Pimoroni's Keybow learning portal](https://learn.pimoroni.com/product/keybow). See [LICENSE](LICENSE) for component licensing and [third-party notices](THIRD_PARTY_NOTICES.md) for bundled dependencies and firmware provenance.
+[License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Original Keybow guides](https://learn.pimoroni.com/product/keybow)

@@ -1,8 +1,8 @@
 # Build firmware and desktop packages
 
-[← Keybow Firmware Plus](../README.md) · [Installation](installation.md) · [Firmware update](firmware-update.md) · [Usage](usage.md)
+[← Keybow Firmware Plus](../README.md) · [Development setup](development.md) · [Coding guidelines](coding-guidelines.md)
 
-Run these commands from the repository root. Outputs go to `build/`.
+These instructions are for contributors building packages from source. End users should download the [firmware](firmware-update.md) and [desktop app](installation.md) from GitHub Releases. Run commands from the repository root; outputs go to `build/`.
 
 ## Keybow SD card package with Docker
 
@@ -14,11 +14,11 @@ Install Docker and `zip`, then run:
 
 The script builds the bundled C sources and dependencies with an ARMv6-compatible cross toolchain. It writes `build/keybow`, a repacked `build/initrd`, and the complete `build/keybow-sdcard.zip`. The ZIP includes the `sdcard/` contents at its root, including boot files, Lua layouts, and patterns. Docker adds the update recovery scripts to the bundled `initrd`; it does not rebuild the kernel or Raspberry Pi boot binaries. It also writes a versioned, checksummed runtime manifest for USB updates. Local builds default to version `0.0.0`; set `KEYBOW_FIRMWARE_VERSION=0.0.1` for a versioned local package. Follow the [firmware update guide](firmware-update.md) for the one-time card upgrade and later USB updates.
 
-Pushing a tag such as `firmware-v0.0.1` runs the [firmware release workflow](../.github/workflows/firmware-release.yml) on an Ubuntu runner. It builds the SD card ZIP with Docker, checks the executable and required files, then attaches `keybow-firmware-plus-firmware-v0.0.1-sdcard.zip` and its `-update.json` manifest to a [GitHub Release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases). The editor recognizes firmware releases that contain both assets. After the commit to release is on the remote branch:
+Pushing an unused `firmware-vMAJOR.MINOR.PATCH` tag runs the [firmware release workflow](../.github/workflows/firmware-release.yml) on an Ubuntu runner. It builds and checks the SD card ZIP, then attaches a versioned ZIP and its `-update.json` manifest to a separate firmware release. The editor recognizes releases containing both assets. For example, after the commit to release is on the remote branch and `firmware-v0.0.2` is available:
 
 ```sh
-git tag firmware-v0.0.1
-git push origin firmware-v0.0.1
+git tag -a firmware-v0.0.2 -m 'Keybow firmware v0.0.2'
+git push origin firmware-v0.0.2
 ```
 
 Firmware tags use `firmware-vMAJOR.MINOR.PATCH`; desktop editor tags use `vMAJOR.MINOR.PATCH` and run a separate workflow.
@@ -27,11 +27,11 @@ Firmware tags use `firmware-vMAJOR.MINOR.PATCH`; desktop editor tags use `vMAJOR
 
 Build on each target operating system and architecture. Each script runs the Python editor tests and needs internet access once to install pinned build dependencies. [PyInstaller builds on the target OS](https://pyinstaller.org/en/latest/usage.html). Packages include Python and app code; users do not install Python separately.
 
-Pushing a version tag such as `v0.0.1` runs the [desktop release workflow](../.github/workflows/desktop-release.yml). It builds both Mac DMGs, a Windows x64 ZIP, and an Ubuntu 24.04 x64 DEB, then attaches all four to a [GitHub Release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases) after every build succeeds. For example, after the commit to release is on the remote branch:
+Pushing an unused `vMAJOR.MINOR.PATCH` tag runs the [desktop release workflow](../.github/workflows/desktop-release.yml). It builds both Mac DMGs, a Windows x64 ZIP, and an Ubuntu 24.04 x64 DEB, then attaches all four to a desktop release after every build succeeds. For example, after the commit to release is on the remote branch and `v0.0.2` is available:
 
 ```sh
-git tag v0.0.1
-git push origin v0.0.1
+git tag -a v0.0.2 -m 'Keybow Editor v0.0.2'
+git push origin v0.0.2
 ```
 
 Tags must use `vMAJOR.MINOR.PATCH`. The Ubuntu DEB version is derived from the tag without `v`. The workflow uses GitHub's token and does not require a locally authenticated `gh` CLI. These desktop packages are unsigned; the workflow does not build or publish the SD card firmware ZIP. The local scripts below remain available.
@@ -65,46 +65,8 @@ sudo apt install python3-venv python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-
 ./packaging/build-ubuntu.sh
 ```
 
-The output is `build/keybow-editor-ubuntu-x64.deb`. The package version defaults to `1.0.0` for a local build; set `KEYBOW_VERSION=1.2.3` before the script to assign another version.
+The output is `build/keybow-editor-ubuntu-x64.deb`. The package version defaults to `1.0.0` for a local build; set `KEYBOW_VERSION=0.0.2` before the script to assign another version.
 
 The app icon source and converted macOS, Windows, and Ubuntu assets are in `editor/assets/`. Normal builds need no image conversion tools. To regenerate them after changing the source icon, run `./packaging/generate-icons.sh` on a Mac with ImageMagick installed.
 
-## Browser development
-
-Install `editor/requirements-desktop.txt` in a Python environment and run:
-
-```sh
-PYTHON=/path/to/venv/bin/python ./run-editor.sh
-```
-
-The development server listens on `127.0.0.1` only.
-
-## Legacy native firmware build
-
-A native build targets the **host** computer's architecture. Use the Docker build above for a Pi Zero firmware binary. The older manual build route installs a local toolchain and builds the bundled dependencies first:
-
-```sh
-sudo apt install build-essential autoconf libtool libconfig-dev libpng-dev libreadline-dev
-
-cd bcm2835-1.68
-autoreconf -f -i
-mkdir build
-./configure --prefix="$(pwd)/build"
-make
-make install
-cd ..
-
-cd libusbgx
-autoreconf -i
-mkdir build
-./configure --prefix="$(pwd)/build"
-make
-make install
-cd ..
-
-cd lua-5.4.0
-make linux
-cd ..
-```
-
-The upstream [Pimoroni repository](https://github.com/pimoroni/keybow-firmware) provides historical build context for this route.
+For the browser development server and test command, see [Development setup](development.md).

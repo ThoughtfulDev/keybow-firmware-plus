@@ -1,6 +1,6 @@
 # Use Keybow Editor
 
-[← Keybow Firmware Plus](../README.md) · [Installation](installation.md) · [Firmware update](firmware-update.md) · [Building](building.md)
+[← Keybow Firmware Plus](../README.md) · [Installation](installation.md) · [Firmware update](firmware-update.md)
 
 Connect the updated 12-key Keybow with a USB data cable and open the [desktop editor](installation.md). The profile list comes from Keybow's SD card each time the editor connects, so the same saved profiles appear when you use another computer with the editor installed.
 
@@ -19,8 +19,6 @@ Each profile has a base layer and can have up to three more named layers. Add a 
 ## Keyboard layouts
 
 Choose **US English**, **German (macOS)**, **German (Windows)**, or **German (Linux)** for each profile. Match your computer's active input source to the selected profile layout; the editor does not change the operating system's input source. Opening a saved profile on another operating system does not translate its keys automatically. An explicit layout change translates supported assignments across every layer and reports unsupported ones before saving. Mac Command and Windows/Linux GUI shortcuts may need manual reassignment when switching between German targets.
-
-Existing version 1–3 profiles are upgraded in memory when opened and are written in the current format only when saved. An older `de` layout means German macOS.
 
 ## Connection and save errors
 
