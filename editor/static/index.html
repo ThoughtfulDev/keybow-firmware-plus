@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keybow editor</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">Keybow <span>Editor</span></div>
+      <div class="device" id="device-status" role="status">Checking device…</div>
+      <div class="port-control">
+        <label for="serial-port">USB serial port</label>
+        <select id="serial-port"><option value="">Automatic</option></select>
+        <button id="refresh-ports" type="button" class="text-button">Refresh ports</button>
+      </div>
+      <div class="sidebar-heading">
+        <h2>Profiles</h2>
+        <button class="text-button" id="add-profile" type="button">Add</button>
+      </div>
+      <div class="profile-list" id="profile-list"></div>
+      <p class="sidebar-note">Profiles are stored on Keybow. Saving the active profile applies it immediately.</p>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="profile-title">Connect Keybow</h1>
+          <p id="profile-subtitle">Plug Keybow into this computer to edit its keys and lights.</p>
+          <button id="rename-profile" type="button" class="text-button" disabled>Rename profile</button>
+        </div>
+        <div class="top-actions">
+          <button id="activate-profile" type="button" class="secondary" disabled>Make active</button>
+          <button id="save-profile" type="button" class="primary" disabled>Save changes</button>
+        </div>
+      </header>
+
+      <div id="message" class="message" role="status" aria-live="polite"></div>
+
+      <div class="layer-bar" aria-label="Profile layers">
+        <div class="layer-tabs" id="layer-tabs" aria-label="Layers"></div>
+        <div class="layer-actions">
+          <button id="add-layer" type="button" class="text-button" disabled>Add layer</button>
+          <button id="rename-layer" type="button" class="text-button" disabled>Rename</button>
+          <button id="delete-layer" type="button" class="text-button" disabled>Delete</button>
+        </div>
+      </div>
+
+      <div class="workspace">
+        <section class="board-panel" aria-labelledby="board-title">
+          <div class="section-head">
+            <div>
+              <h2 id="board-title">Your Keybow</h2>
+              <p>USB cutout faces away from you. Select a key to edit it.</p>
+            </div>
+          </div>
+          <div class="device-stage">
+            <div class="keybow-device">
+              <div class="usb-cutout" aria-hidden="true"></div>
+              <div class="device-screw screw-left" aria-hidden="true"></div>
+              <div class="device-screw screw-right" aria-hidden="true"></div>
+              <div class="key-grid" id="key-grid" aria-label="Keybow keys"></div>
+              <div class="case-mark">KEYBOW</div>
+            </div>
+          </div>
+          <div class="board-caption"><span>Front edge</span><span>12 illuminated keys</span></div>
+          <div class="lighting">
+            <div class="section-head">
+              <div>
+                <h2>Lighting</h2>
+                <p>Choose static key colors or an existing pattern.</p>
+              </div>
+            </div>
+            <div class="field-row">
+              <label for="lighting-mode">Mode</label>
+              <select id="lighting-mode" disabled>
+                <option value="preset">Pattern</option>
+                <option value="static">Per-key colors</option>
+              </select>
+            </div>
+            <div class="field-row" id="preset-row">
+              <label for="preset">Pattern</label>
+              <select id="preset" disabled></select>
+            </div>
+          </div>
+        </section>
+
+        <aside class="inspector" aria-labelledby="inspector-title">
+          <div class="section-head">
+            <div>
+              <h2 id="inspector-title">Key 01</h2>
+              <p>Action and appearance</p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="keyboard-layout">Keyboard layout</label>
+            <select id="keyboard-layout" disabled>
+              <option value="us">US English</option>
+              <option value="de-macos">German (macOS)</option>
+              <option value="de-windows">German (Windows)</option>
+              <option value="de-linux">German (Linux)</option>
+            </select>
+            <p class="field-help">Match your computer's active keyboard layout. This setting is saved with the profile.</p>
+          </div>
+          <div class="field">
+            <label for="action-kind">Action</label>
+            <select id="action-kind" disabled>
+              <option value="keyboard">Keyboard key</option>
+              <option value="media">Media control</option>
+              <option value="layer">Switch layer</option>
+              <option value="none">Unassigned</option>
+            </select>
+          </div>
+          <div class="field" id="key-usage-row">
+            <label for="key-usage">Key</label>
+            <select id="key-usage" disabled></select>
+          </div>
+          <fieldset id="modifiers-row" disabled>
+            <legend>Modifiers</legend>
+            <div class="modifiers">
+              <label><input type="checkbox" value="0"> Control</label>
+              <label><input type="checkbox" value="1"> Shift</label>
+              <label><input type="checkbox" value="2"> <span id="alt-label">Option</span></label>
+              <label><input type="checkbox" value="3"> <span id="meta-label">Command</span></label>
+              <label><input type="checkbox" value="6"> AltGr / right Alt</label>
+            </div>
+          </fieldset>
+          <div class="field" id="media-usage-row" hidden>
+            <label for="media-usage">Media action</label>
+            <select id="media-usage" disabled></select>
+          </div>
+          <div class="field" id="layer-target-row" hidden>
+            <label for="layer-target">Target layer</label>
+            <select id="layer-target" disabled></select>
+          </div>
+          <div class="field" id="layer-mode-row" hidden>
+            <label for="layer-mode">Switch mode</label>
+            <select id="layer-mode" disabled>
+              <option value="toggle">Toggle until pressed again</option>
+              <option value="hold">While held</option>
+              <option value="timed">Return after a delay</option>
+            </select>
+          </div>
+          <div class="field" id="layer-seconds-row" hidden>
+            <label for="layer-seconds">Return after (seconds)</label>
+            <input id="layer-seconds" type="number" min="1" max="3600" step="1" disabled>
+          </div>
+          <p class="field-help" id="reserved-note" hidden>Reserved for return. This key switches back to the previous layer.</p>
+          <div class="color-editor" id="key-color-row" hidden>
+            <h3>Key color</h3>
+            <div class="color-main">
+              <div class="wheel-wrap">
+                <canvas id="color-wheel" width="240" height="240" tabindex="0" role="slider" aria-label="Hue and saturation color wheel" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0"></canvas>
+                <span class="wheel-marker" id="wheel-marker" aria-hidden="true"></span>
+              </div>
+              <div class="color-controls">
+                <div class="selected-swatch" id="selected-swatch" aria-hidden="true"></div>
+                <label for="color-value">Brightness</label>
+                <input id="color-value" type="range" min="0" max="100" value="100" disabled>
+                <label for="color-hex">Hex</label>
+                <input id="color-hex" type="text" maxlength="7" spellcheck="false" placeholder="#RRGGBB" disabled>
+              </div>
+            </div>
+            <div class="rgb-fields">
+              <label for="color-r">R <input id="color-r" type="number" min="0" max="255" disabled></label>
+              <label for="color-g">G <input id="color-g" type="number" min="0" max="255" disabled></label>
+              <label for="color-b">B <input id="color-b" type="number" min="0" max="255" disabled></label>
+            </div>
+            <p class="color-error" id="color-error" role="status" aria-live="polite"></p>
+          </div>
+          <div class="inspector-footer">
+            <button id="delete-profile" type="button" class="danger" disabled>Delete profile</button>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <script src="/color.js" defer></script>
+  <script src="/app.js" defer></script>
+</body>
+</html>

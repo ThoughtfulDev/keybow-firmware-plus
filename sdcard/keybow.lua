@@ -153,7 +153,7 @@ function keybow.clear_lights()
 end
 
 function keybow.load_pattern(file)
-    keybow_load_pattern(file)
+    return keybow_load_pattern(file)
 end
 
 -- Meta keys - ctrl, shift, alt and win/apple

@@ -1,61 +1,40 @@
-# Keybow and Keybow MINI
+![Keybow Firmware Plus banner with a lit 12-key Keybow](docs/images/keybow-banner.webp)
 
-[Buy Keybow and Keybow MINI here](https://shop.pimoroni.com/?q=keybow)
+---
 
-Keybow is an easy-to-build, solderless, DIY mini mechanical keyboard, Raspberry Pi-powered, with twelve illuminated keys, hot-swap clicky or linear switches, clear keycaps, and awesome customisable layouts and macros. It's the ultimate macro pad.
+**Keybow Firmware Plus** is a fork of [Pimoroni's original Keybow firmware](https://github.com/pimoroni/keybow-firmware). It adds a desktop editor and USB profile updates for the **12-key Keybow**, so you can change keys, layers, and lighting without removing the SD card after the initial firmware update. These additions have not been verified on Keybow MINI.
 
-Keybow MINI is a three-key version of it's older sibling, Keybow.
+- Edit named profiles on macOS, Windows, or Ubuntu; profiles are stored on Keybow's SD card.
+- Assign keyboard shortcuts, media controls, or no action to each key.
+- Use up to four layers with toggle, hold, or timed switching.
+- Set per-key colors or use the existing lighting patterns.
+- Choose US or German keyboard layouts for macOS, Windows, and Linux.
 
-This Keybow OS is RAM-disk-based and built upon a stripped-down Raspbian, with C bindings that setup and run the USB HID, and a series of Lua-based scripts to customise the key layouts and lighting.
+## Get started
 
-## Using the Keybow software
+1. [Install the one-time Keybow firmware update](docs/firmware-update.md).
+2. [Install the desktop editor](docs/installation.md).
+3. [Edit profiles and lighting](docs/usage.md).
 
-Format a micro-SD card in FAT32 format (we recommend the SD Association's [SD Card Formatter](https://www.sdcard.org/downloads/formatter_4/), and then drop the contents of the [sdcard](sdcard) folder (only the files inside the folder) onto the freshly-formatted micro-SD card.
+For local firmware and desktop package builds, see [Building](docs/building.md).
 
-You can grab the latest `keybow-x.x.x.zip` file from https://github.com/pimoroni/keybow-firmware/releases and unzip it directly to your SD card.
+<details>
+<summary>See editor screenshots</summary>
 
-Learn more about how to use Keybow on our [learning portal](https://learn.pimoroni.com/product/keybow).
+### Profile and device view
 
-## Building
+![Keybow Editor with a demo profile and its 12-key device view](docs/images/editor-overview.png)
 
-You'll need a build toolchain.
+### Per-key color controls
 
-```
-sudo apt install build-essential autoconf libtool libconfig-dev libpng-dev
-```
+![Keybow Editor showing the color wheel, brightness, hex, and RGB controls](docs/images/editor-color.png)
 
-### bcm2835
+### Media layer
 
-Build the bcm2835 library and install into a local build directory for static linking.
+![Keybow Editor showing a second layer with media controls and a reserved return key](docs/images/editor-layers.png)
 
-```
-cd bcm2835-*.**
-autoreconf -f -i
-mkdir build
-./configure --prefix=$(pwd)/build
-make
-make install
-cd ..
-```
+Screenshots use a simulated demo profile; no connected Keybow profile was changed.
 
-### libusbgx
+</details>
 
-```
-sudo apt install libconfig-dev
-cd libusbgx
-autoreconf -i
-mkdir build
-./configure --prefix=$(pwd)/build
-make
-make install
-cd ..
-```
-
-### lua
-
-```
-sudo apt install libreadline-dev
-cd lua-5.4.0
-make linux
-cd ..
-```
+The original hardware and software guides remain available on [Pimoroni's Keybow learning portal](https://learn.pimoroni.com/product/keybow). See [LICENSE](LICENSE) for the original software and bundled component terms.

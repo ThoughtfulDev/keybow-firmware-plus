@@ -345,6 +345,7 @@ int initLUA() {
     status = lua_pcall(L, 0, LUA_MULTRET, 0);
     if(status) {
         printf("Runtime Error: %s\n", lua_tostring(L, -1));
+        return 1;
     }
 
     lua_getglobal(L, "tick");
@@ -357,13 +358,18 @@ int initLUA() {
     return 0;
 }
 
-void luaCallSetup(void) {
+int luaCallSetup(void) {
     lua_getglobal(L, "setup");
     if(lua_isfunction(L, lua_gettop(L))){
         if(lua_pcall(L, 0, 0, 0) != 0){
             printf("Error running function `setup`: %s", lua_tostring(L, -1));
+            lua_pop(L, 1);
+            return 1;
         }
+    } else {
+        lua_pop(L, 1);
     }
+    return 0;
 }
 
 int luaHandleKey(unsigned short key_index, unsigned short key_state) {
@@ -391,7 +397,39 @@ void luaTick(void){
 }
 
 void luaClose(void){
-    lua_close(L);
-    sendHIDReport();
-    sendMouseReport();
+    if (L) lua_close(L);
+    L = NULL;
+}
+
+int luaCheckSource(const char *source, size_t length) {
+    lua_State *check = luaL_newstate();
+    if (!check) return 1;
+    int result = luaL_loadbuffer(check, source, length, "profile");
+    lua_close(check);
+    return result != LUA_OK;
+}
+
+int luaReload(void) {
+    lua_State *previous = L;
+    lights_stop();
+    L = NULL;
+    int failed = initLUA() != 0;
+    if (!failed) {
+        lua_getglobal(L, "keybow_profile_fallback");
+        failed = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+    }
+    if (!failed) failed = luaCallSetup() != 0;
+    if (failed) {
+        luaClose();
+        L = previous;
+        if (L) luaCallSetup();
+        lights_start();
+        return 1;
+    }
+    clearHIDState();
+    resetKeyState();
+    if (previous) lua_close(previous);
+    lights_start();
+    return 0;
 }

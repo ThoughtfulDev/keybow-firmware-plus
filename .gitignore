@@ -22,3 +22,6 @@ libserialport/build
 libusbgx/build
 libusbgx/m4
 libusbgx/libusbgx.p4
+build/
+.DS_Store
+__pycache__/

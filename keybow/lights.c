@@ -39,69 +39,87 @@ void abort_(const char * s, ...)
 
 int read_png_file(char* file_name)
 {
-    unsigned char header[8];    // 8 is the maximum size that can be checked
-
-    /* open file and test for it being a png */
+    unsigned char header[8];
     FILE *fp = fopen(file_name, "rb");
     if (!fp) {
         abort_("[read_png_file] File %s could not be opened for reading", file_name);
         return 1;
     }
-    fread(header, 1, 8, fp);
-    if (png_sig_cmp(header, 0, 8)) {
+    if (fread(header, 1, 8, fp) != 8 || png_sig_cmp(header, 0, 8)) {
         abort_("[read_png_file] File %s is not recognized as a PNG file", file_name);
+        fclose(fp);
         return 1;
     }
 
-    /* initialize stuff */
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    struct png_image {
+        png_structp png;
+        png_infop info;
+        png_bytep *rows;
+        int rows_allocated;
+    } *next = calloc(1, sizeof(*next));
+    if (!next) {
+        fclose(fp);
+        return 1;
+    }
 
-    if (!png_ptr) {
+    next->png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!next->png) {
         abort_("[read_png_file] png_create_read_struct failed");
-        return 1;
+        goto failed;
     }
-
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
+    next->info = png_create_info_struct(next->png);
+    if (!next->info) {
         abort_("[read_png_file] png_create_info_struct failed");
-        return 1;
+        goto failed;
     }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        abort_("[read_png_file] Error during init_io");
-        return 1;
+    if (setjmp(png_jmpbuf(next->png))) {
+        abort_("[read_png_file] Error reading %s", file_name);
+        goto failed;
     }
-
-    png_init_io(png_ptr, fp);
-    png_set_sig_bytes(png_ptr, 8);
-
-    png_read_info(png_ptr, info_ptr);
-
-    width = png_get_image_width(png_ptr, info_ptr);
-    height = png_get_image_height(png_ptr, info_ptr);
-    color_type = png_get_color_type(png_ptr, info_ptr);
-    bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-    color_channels = png_get_channels(png_ptr, info_ptr);
-
-    number_of_passes = png_set_interlace_handling(png_ptr);
-    png_read_update_info(png_ptr, info_ptr);
-
-
-    /* read file */
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        abort_("[read_png_file] Error during read_image");
-        return 1;
+    png_init_io(next->png, fp);
+    png_set_sig_bytes(next->png, 8);
+    png_read_info(next->png, next->info);
+    int new_width = png_get_image_width(next->png, next->info);
+    int new_height = png_get_image_height(next->png, next->info);
+    int new_depth = png_get_bit_depth(next->png, next->info);
+    int new_channels = png_get_channels(next->png, next->info);
+    if (new_width < 1 || new_height < 1 || new_depth != 8 || new_channels < 3 ||
+        (new_width == 4 && new_height < 3)) {
+        abort_("[read_png_file] Unsupported dimensions or color in %s", file_name);
+        goto failed;
     }
+    png_set_interlace_handling(next->png);
+    png_read_update_info(next->png, next->info);
+    next->rows = calloc((size_t)new_height, sizeof(*next->rows));
+    if (!next->rows) goto failed;
+    for (int row = 0; row < new_height; row++) {
+        next->rows[row] = malloc(png_get_rowbytes(next->png, next->info));
+        if (!next->rows[row]) goto failed;
+        next->rows_allocated++;
+    }
+    png_read_image(next->png, next->rows);
 
-    row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
-    for (y=0; y<height; y++)
-        row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
-
-    png_read_image(png_ptr, row_pointers);
-
+    for (int row = 0; row < height; row++) free(row_pointers[row]);
+    free(row_pointers);
+    row_pointers = next->rows;
+    width = new_width;
+    height = new_height;
+    color_channels = new_channels;
+    bit_depth = new_depth;
+    color_type = png_get_color_type(next->png, next->info);
+    next->rows = NULL;
     fclose(fp);
-
+    png_destroy_read_struct(&next->png, &next->info, NULL);
+    free(next);
     return 0;
+
+failed:
+    for (int row = 0; row < next->rows_allocated; row++) free(next->rows[row]);
+    free(next->rows);
+    png_destroy_read_struct(&next->png, &next->info, NULL);
+    free(next);
+    fclose(fp);
+    return 1;
 }
 
 int initLights() {
@@ -129,10 +147,9 @@ int initLights() {
 }
 
 void *lights_run(void *void_ptr){
-    lights_running = 1;
     while(lights_running){
-        int delta = (millis() / (1000/60)) % height;
-        if (lights_auto) {
+        int delta = height ? (millis() / (1000/60)) % height : 0;
+        if (lights_auto && height && row_pointers) {
             pthread_mutex_lock( &lights_mutex );
             lights_drawPngFrame(delta);
             pthread_mutex_unlock( &lights_mutex );
@@ -144,7 +161,9 @@ void *lights_run(void *void_ptr){
 }
 
 int lights_start() {
+    lights_running = 1;
     if(pthread_create(&t_run_lights, NULL, lights_run, NULL)) {
+        lights_running = 0;
         printf("Error creating lighting thread.\n");
         return 1;
     }

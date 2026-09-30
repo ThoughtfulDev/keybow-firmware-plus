@@ -18,4 +18,5 @@ typedef struct keybow_key {
 keybow_key get_key(unsigned short index);
 int initUSB();
 int initGPIO();
+void resetKeyState(void);
 int main();

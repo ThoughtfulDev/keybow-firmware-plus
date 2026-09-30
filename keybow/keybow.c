@@ -2,6 +2,7 @@
 #include "serial.h"
 #include "gadget-hid.h"
 #include "lights.h"
+#include "profiles.h"
 
 #include <bcm2835.h>
 #include <signal.h>
@@ -55,6 +56,10 @@ int updateKeys() {
     return 0;
 }
 
+void resetKeyState(void) {
+    for (int i = 0; i < NUM_KEYS; i++) last_state[i] = 0;
+}
+
 int main() {
     int ret;
     chdir(KEYBOW_HOME);
@@ -77,6 +82,7 @@ int main() {
     }
 
     ret = initUSB();
+    if (ret != 0) return 1;
     ret = initHID();
     if(ret != 0) {
         return 1;
@@ -91,10 +97,7 @@ int main() {
         return ret;
     }
 
-    int x = 0;
-    for(x = 0; x < NUM_KEYS; x++){
-        last_state[x] = 0;
-    }
+    resetKeyState();
 
 #ifdef KEYBOW_DEBUG
     printf("Initializing Lights\n");
@@ -113,6 +116,7 @@ int main() {
     lights_start();
 
     while (running){
+        profiles_poll();
         luaTick();
         updateKeys();
         usleep(1000);

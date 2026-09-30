@@ -25,6 +25,7 @@ unsigned short getMediaKey(unsigned short index);
 unsigned short setMediaKey(unsigned short index, unsigned short state);
 
 void sendHIDReport();
+void clearHIDState(void);
 void sendMouseReport();
 
 int initUSB();

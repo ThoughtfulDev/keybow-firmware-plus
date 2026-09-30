@@ -1,0 +1,17 @@
+**/build/
+**/autom4te.cache/
+**/.deps/
+**/*.o
+**/*.a
+**/*.so
+.git/
+.github/
+editor/
+tests/
+sdcard/
+README.md
+run-editor.sh
+build-docker.sh
+keybow/make.log
+keybow/keybow
+.DS_Store

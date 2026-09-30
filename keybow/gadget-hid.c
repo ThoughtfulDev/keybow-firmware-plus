@@ -399,6 +399,17 @@ void sendHIDReport(){
     }
 }
 
+void clearHIDState(void) {
+    modifiers = 0;
+    media_keys = 0;
+    mouse_buttons = 0;
+    mouse_x = 0;
+    mouse_y = 0;
+    for (int i = 0; i < 14; i++) pressed_keys[i] = 0;
+    sendHIDReport();
+    sendMouseReport();
+}
+
 void sendMouseReport(){
     unsigned char buf[MOUSE_REPORT_SIZE + 1];
     buf[0] = 3;
