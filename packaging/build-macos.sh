@@ -25,8 +25,18 @@ python_license=$("$venv/bin/python" packaging/python-license-path.py)
 cp "$python_license" "$staging/Keybow Editor.app/Contents/Resources/PythonLicense.txt"
 ln -s /Applications "$staging/Applications"
 image="build/keybow-editor-macos-$arch.dmg"
-hdiutil create -quiet -ov -format UDZO -imagekey zlib-level=9 \
-  -volname 'Keybow Editor' -srcfolder "$staging" "$image"
-hdiutil verify -quiet "$image"
+built=0
+for attempt in 1 2 3; do
+  rm -f "$image"
+  if hdiutil create -ov -format UDZO -imagekey zlib-level=9 -fs HFS+ \
+    -volname 'Keybow Editor' -srcfolder "$staging" "$image" \
+    && hdiutil verify "$image"; then
+    built=1
+    break
+  fi
+  echo "DMG creation or verification failed (attempt $attempt of 3)" >&2
+  sleep 2
+done
+[ "$built" -eq 1 ] || exit 1
 rm -f "build/keybow-editor-macos-$arch.zip"
 echo "$image"
