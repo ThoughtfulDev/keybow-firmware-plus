@@ -37,4 +37,4 @@ Screenshots use a simulated demo profile; no connected Keybow profile was change
 
 </details>
 
-The original hardware and software guides remain available on [Pimoroni's Keybow learning portal](https://learn.pimoroni.com/product/keybow). See [LICENSE](LICENSE) for the original software and bundled component terms.
+The original hardware and software guides remain available on [Pimoroni's Keybow learning portal](https://learn.pimoroni.com/product/keybow). See [LICENSE](LICENSE) for component licensing and [third-party notices](THIRD_PARTY_NOTICES.md) for bundled dependencies and firmware provenance.

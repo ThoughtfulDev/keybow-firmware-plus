@@ -17,8 +17,13 @@ venv=build/editor-venv-linux
   --paths editor --add-data "$(pwd)/editor/static:static" --hidden-import webview.platforms.gtk editor/launch.py
 pkg=build/keybow-editor-deb
 mkdir -p "$pkg/DEBIAN" "$pkg/opt/keybow-editor" "$pkg/usr/bin" "$pkg/usr/share/applications" \
+  "$pkg/usr/share/doc/keybow-editor" \
   "$pkg/usr/share/icons/hicolor/256x256/apps"
 cp -R build/editor-dist-linux/keybow-editor/. "$pkg/opt/keybow-editor/"
+install -m 644 THIRD_PARTY_NOTICES.md "$pkg/usr/share/doc/keybow-editor/THIRD_PARTY_NOTICES.md"
+install -m 644 editor/LICENSE "$pkg/usr/share/doc/keybow-editor/KeybowEditorLicense.txt"
+python_prefix=$("$venv/bin/python" -c 'import sys; print(sys.base_prefix)')
+install -m 644 "$python_prefix/LICENSE" "$pkg/usr/share/doc/keybow-editor/PythonLicense.txt"
 cat > "$pkg/DEBIAN/control" <<EOF
 Package: keybow-editor
 Version: 1.0.0

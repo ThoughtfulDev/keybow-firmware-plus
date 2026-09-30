@@ -18,6 +18,11 @@ staging="build/editor-dmg-stage-$arch"
 mkdir -p "$staging"
 rm -rf "$staging/Keybow Editor.app" "$staging/Applications"
 cp -R "build/editor-dist-$arch/Keybow Editor.app" "$staging/Keybow Editor.app"
+mkdir -p "$staging/Keybow Editor.app/Contents/Resources"
+cp THIRD_PARTY_NOTICES.md "$staging/Keybow Editor.app/Contents/Resources/ThirdPartyNotices.md"
+cp editor/LICENSE "$staging/Keybow Editor.app/Contents/Resources/KeybowEditorLicense.txt"
+python_prefix=$("$venv/bin/python" -c 'import sys; print(sys.base_prefix)')
+cp "$python_prefix/LICENSE" "$staging/Keybow Editor.app/Contents/Resources/PythonLicense.txt"
 ln -s /Applications "$staging/Applications"
 image="build/keybow-editor-macos-$arch.dmg"
 hdiutil create -quiet -ov -format UDZO -imagekey zlib-level=9 \

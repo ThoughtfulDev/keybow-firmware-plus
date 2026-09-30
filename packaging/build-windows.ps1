@@ -14,5 +14,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
   --distpath build\editor-dist-win --workpath build\editor-work-win --specpath build `
   --paths editor --add-data "$(Resolve-Path editor\static):static" editor\launch.py
 if ($LASTEXITCODE -ne 0) { throw 'PyInstaller failed' }
+Copy-Item THIRD_PARTY_NOTICES.md build\editor-dist-win\KeybowEditor\THIRD_PARTY_NOTICES.md -Force
+Copy-Item editor\LICENSE build\editor-dist-win\KeybowEditor\KeybowEditorLicense.txt -Force
+$pythonPrefix = & $venv -c 'import sys; print(sys.base_prefix)'
+$pythonLicense = Join-Path $pythonPrefix 'LICENSE'
+if (-not (Test-Path $pythonLicense)) { throw "Python license not found at $pythonLicense" }
+Copy-Item $pythonLicense build\editor-dist-win\KeybowEditor\PythonLicense.txt -Force
 Compress-Archive -Path 'build\editor-dist-win\KeybowEditor' -DestinationPath 'build\keybow-editor-windows-x64.zip' -Force
 Write-Output 'build\keybow-editor-windows-x64.zip'

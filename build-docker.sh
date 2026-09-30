@@ -22,6 +22,7 @@ docker rm "$container_id" >/dev/null
 container_id=
 
 cp -R sdcard/. "$staging_dir/"
+cp THIRD_PARTY_NOTICES.md "$staging_dir/THIRD_PARTY_NOTICES.md"
 cp build/keybow "$staging_dir/keybow"
 rm -f build/keybow-sdcard.zip
 (cd "$staging_dir" && zip -q -r -X "$repo_dir/build/keybow-sdcard.zip" .)

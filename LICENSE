@@ -1,22 +1,27 @@
+# License overview
+
+Keybow Firmware Plus is a fork of [Pimoroni's Keybow firmware](https://github.com/pimoroni/keybow-firmware). This repository contains components under different licenses; there is no single license covering every file.
+
+| Component | License / attribution |
+| --- | --- |
+| Original Keybow C firmware, Lua scripts, and example patterns | MIT, Copyright (c) 2018 Pimoroni Ltd. The original MIT grant is reproduced below. |
+| Keybow Firmware Plus editor code and project-created assets | MIT, Copyright (c) 2026 ThoughtfulDev; see [`editor/LICENSE`](editor/LICENSE). |
+| bcm2835 1.68 | GPL-3.0-only; full text in [`bcm2835-1.68/COPYING`](bcm2835-1.68/COPYING). |
+| libusbgx | LGPL-2.1-or-later library; GPL-2.0-or-later example sources. See [`libusbgx/COPYING.LGPL`](libusbgx/COPYING.LGPL) and [`libusbgx/COPYING`](libusbgx/COPYING). |
+| Lua 5.4.0 | MIT; copyright notice and license are in [`lua-5.4.0/doc/readme.html`](lua-5.4.0/doc/readme.html). |
+| Raspberry Pi boot firmware | Broadcom/Raspberry Pi binary redistribution terms in [`sdcard/LICENCE.broadcom`](sdcard/LICENCE.broadcom). |
+| Linux kernel and initrd packages | Kernel is GPL-2.0; initrd packages retain their individual notices under `/usr/share/doc/*/copyright`. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for firmware provenance and source-availability status. |
+| Desktop app dependencies | Individual licenses and required notices are summarized in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md); package builds include that file. |
+
+The `keybow` executable statically links bundled components, including bcm2835 and libusbgx. Its distribution is therefore subject to the applicable copyleft terms as well as the source-code obligations described in the component licenses. Do not treat the original MIT grant as applying to the combined executable or the entire repository.
+
+## Original Keybow MIT license
+
+The MIT license applies to Pimoroni's Keybow software only, including the `keybow` source, `keys.lua` and related scripts, and example animation PNGs.
+
 MIT License
 
 Copyright (c) 2018 Pimoroni Ltd.
-
-The MIT license applies to the keybow software only, IE:
-
-* The "keybow" executable file (source provided in the keybow directory)
-* The "keys.lua" and related lua scripts
-* The "*.png" example animation images
-
-Boot files on the initrd are sourced from - https://github.com/raspberrypi/firmware under the terms detailed in LICENSE.broadcom
-
-Linux kernel.img and initrd are built from Raspbian source and packages - https://github.com/raspberrypi/linux using https://github.com/ali1234/rpi-ramdisk
-
-bcm2835-1.57 and libusbgx are supplied under GPL v2.
-
-lua-5.3.5 is supplied under the MIT License.
-
-See their respective subfolders for applicable license terms.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
