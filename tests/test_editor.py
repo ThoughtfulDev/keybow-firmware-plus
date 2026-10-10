@@ -238,7 +238,7 @@ assert(table.concat(events, ',') == '98true,98false')
         self.assertEqual(parse_lua(generate_lua(v2)), validate(v2))
         modern = upgrade(legacy)
         self.assertEqual(modern["layout"], "us")
-        self.assertEqual(modern["version"], 4)
+        self.assertEqual(modern["version"], 5)
         self.assertEqual(modern["layers"][0]["id"], "base")
         self.assertEqual(parse_lua(generate_lua(modern)), validate(modern))
         self.assertEqual(upgrade(v2)["layout"], "de-macos")
@@ -370,6 +370,7 @@ class EditorFlowTests(unittest.TestCase):
                 self.files = {"default": generate_lua(default_profile()).encode(),
                               server.MARKER_ID: server.MARKER_SOURCE}
                 self.active = "default"
+                self.sequence_support = True
                 self.selected_port = None
                 self.port_name = "COM7"
 
@@ -382,6 +383,10 @@ class EditorFlowTests(unittest.TestCase):
                 self.selected_port = name
 
             def request(self, command, payload=b""):
+                if command == "capabilities":
+                    if not self.sequence_support:
+                        raise DeviceError("Invalid profile or request")
+                    return b"sequences-v1"
                 if command == "ping":
                     return b"Keybow 1"
                 if command == "list":
@@ -423,12 +428,12 @@ class EditorFlowTests(unittest.TestCase):
         server.DEVICE = FakeDevice()
         try:
             current = request("GET", "/api/profiles/default")
-            self.assertEqual((current["version"], current["layout"]), (4, "us"))
+            self.assertEqual((current["version"], current["layout"]), (5, "us"))
             self.assertTrue(request("GET", "/api/status")["layersReady"])
             self.assertEqual(request("GET", "/api/ports")["ports"][0]["device"], "COM7")
             self.assertEqual(request("POST", "/api/port", {"device": "COM7"}), {"selected": "COM7"})
             self.assertIn("available", request("POST", "/api/port", {"device": "COM9"})["error"])
-            self.assertEqual(request("GET", "/api/template")["version"], 4)
+            self.assertEqual(request("GET", "/api/template")["version"], 5)
             self.assertNotIn(server.MARKER_ID, request("GET", "/api/profiles")["ids"])
             current["id"] = "german-test"
             current["name"] = "German layers"
@@ -449,6 +454,21 @@ class EditorFlowTests(unittest.TestCase):
             self.assertEqual(request("GET", "/api/profiles")["active"], "german-test")
             translated = request("POST", "/api/translate", {"profile": current, "layout": "us"})
             self.assertEqual(translated["layout"], "us")
+            current["layers"][0]["keys"][1] = {"kind": "text", "text": "Hi ä!"}
+            current["layout"] = "de-macos"
+            self.assertTrue(request("GET", "/api/status")["sequencesReady"])
+            self.assertGreater(request("POST", "/api/validate", current)["sourceBytes"], 0)
+            self.assertEqual(request("PUT", "/api/profiles/german-test", current), current)
+            self.assertEqual(request("POST", "/api/active", {"id":"german-test"}), {"active":"german-test"})
+            server.DEVICE.sequence_support = False
+            self.assertFalse(request("GET", "/api/status")["sequencesReady"])
+            self.assertIn("Update Keybow firmware", request("PUT", "/api/profiles/german-test", current)["error"])
+            self.assertIn("Update Keybow firmware", request("POST", "/api/active", {"id":"german-test"})["error"])
+            server.DEVICE.sequence_support = True
+            invalid = copy.deepcopy(current)
+            invalid["layers"][0]["keys"][1] = {"kind":"macro", "steps":[{"kind":"event","device":"keyboard","usage":4,"pressed":True}]}
+            self.assertIn("release every", request("PUT", "/api/profiles/german-test", invalid)["error"])
+            self.assertEqual(request("GET", "/api/profiles/german-test"), current)
             del server.DEVICE.files[server.MARKER_ID]
             self.assertFalse(request("GET", "/api/status")["layersReady"])
             self.assertIn("Install the layer SD card update",

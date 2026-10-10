@@ -1,0 +1,32 @@
+const assert = require('node:assert/strict');
+const {Recorder, physical} = require('../editor/static/sequences.js');
+let time=0;
+const recorder=new Recorder(()=>time);
+function input(type, code, repeat=false) { return recorder.input({type,code,repeat}); }
+input('keydown','ControlLeft'); time=25;
+input('keydown','KeyA'); time=40;
+assert.equal(input('keydown','KeyA',true),false);
+input('keydown','KeyB'); time=50;
+input('keyup','KeyA'); time=60;
+const output=recorder.finish();
+assert.deepEqual(output[0],{kind:'event',device:'modifier',usage:0,pressed:true});
+assert.deepEqual(output[1],{kind:'delay',ms:25});
+assert.equal(output.filter(item=>item.kind==='event').length,6);
+assert.equal(recorder.down.size,0);
+assert.equal(output.at(-1).pressed,false);
+assert.deepEqual(physical('IntlBackslash'),{device:'keyboard',usage:100});
+assert.equal(physical('Unidentified'),null);
+assert.equal(new Recorder().input({type:'keydown',code:'KeyA',isComposing:true}),false);
+const native = new Recorder(()=>time);
+native.input({type:'keydown',code:'KeyA',ctrlKey:true,shiftKey:false,altKey:false,metaKey:false});
+native.input({type:'keyup',code:'KeyA',ctrlKey:true,shiftKey:false,altKey:false,metaKey:false});
+const nativeEvents = native.finish().filter(item=>item.kind==='event');
+assert.deepEqual(nativeEvents.map(item=>[item.device,item.usage,item.pressed]),
+  [['modifier',0,true],['keyboard',4,true],['keyboard',4,false],['modifier',0,false]]);
+const right = new Recorder(()=>time);
+right.input({type:'keydown',code:'ControlRight',ctrlKey:true});
+right.input({type:'keydown',code:'KeyA',ctrlKey:true});
+right.input({type:'keyup',code:'KeyA',ctrlKey:true});
+right.input({type:'keyup',code:'ControlRight',ctrlKey:false});
+assert.equal(right.steps.filter(item=>item.device==='modifier' && item.usage===0).length,0);
+console.log('Recorder timing, overlap, repeat, focus-loss cleanup, and key mapping passed');

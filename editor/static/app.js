@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 const DISPLAY_ORDER = [11, 8, 5, 2, 10, 7, 4, 1, 9, 6, 3, 0];
 const PRESET_LIGHTS = ["#35a9c1", "#8ab6e3", "#b995d4", "#e6b680", "#86b8a5", "#d498ac", "#a3c77a", "#e9c77c", "#86a9ca", "#9fd1c6", "#e7a491", "#b0aacd"];
 const state = {
-  connected: false, layersReady: false, options: null, ports: [], selectedPort: null, ids: [], names: {}, active: null,
+  connected: false, layersReady: false, sequencesReady: false, recording: false, sequenceError: "", sequencePending: false, options: null, ports: [], selectedPort: null, ids: [], names: {}, active: null,
   profile: null, layerId: "base", selected: 0, dirty: false, lastColors: null, colorHsv: null, colorKey: null,
   updating: false, firmware: null, latest: null,
 };
@@ -39,6 +39,8 @@ function tell(message, error = false) {
 
 function labelFor(action) {
   if (!action || action.kind === "none") return "Unassigned";
+  if (action.kind === "text") return `Text: ${action.text.slice(0, 20).replace(/\s/g, " ") || "Empty"}`;
+  if (action.kind === "macro") return `Macro · ${action.steps.length} events`;
   if (action.kind === "media") return state.options.media[action.usage] || "Media";
   if (action.kind === "layer") {
     const target = state.profile.layers.find((item) => item.id === action.target);
@@ -125,6 +127,11 @@ function renderInspector() {
     $(id).disabled = !profile || !state.layersReady;
   }
   $("modifiers-row").disabled = !profile || !state.layersReady;
+  KeybowSequences.render(action, state.options, !!profile && state.connected && state.layersReady && state.sequencesReady && !reservedFor(state.selected).length,
+    changed, (recording) => { state.recording = recording; render(); });
+  $("sequence-upgrade").hidden = !profile || state.sequencesReady;
+  $("sequence-error").textContent = state.sequenceError;
+  for (const kind of ["text", "macro"]) $("action-kind").querySelector(`option[value="${kind}"]`).disabled = !state.sequencesReady;
   if (!profile) return;
   const reserved = reservedFor(state.selected).length > 0;
   $("reserved-note").hidden = !reserved;
@@ -202,7 +209,7 @@ function render() {
   $("serial-port").disabled = state.updating;
   $("refresh-ports").disabled = state.updating;
   $("main").inert = state.updating;
-  $("install-firmware").disabled = state.updating || !state.connected || !state.firmware?.supported ||
+  $("install-firmware").disabled = state.recording || state.updating || !state.connected || !state.firmware?.supported ||
     !state.latest || !newerFirmware(state.latest.version, state.firmware.version);
   $("device-status").textContent = state.connected ? "Connected over USB" : "Keybow is disconnected";
   $("device-status").classList.toggle("online", state.connected);
@@ -210,8 +217,8 @@ function render() {
   $("profile-subtitle").textContent = state.profile
     ? `${state.profile.id === state.active ? "Active profile" : "Saved profile"}${state.dirty ? " · Unsaved changes" : ""}`
     : "Plug Keybow into this computer to edit its keys and lights.";
-  $("save-profile").disabled = !state.profile || !state.connected || !state.layersReady || !state.dirty;
-  $("activate-profile").disabled = !state.profile || !state.connected || state.profile.id === state.active || state.dirty;
+  $("save-profile").disabled = !state.profile || !state.connected || !state.layersReady || !state.dirty || state.recording || state.sequencePending || !!state.sequenceError || (!state.sequencesReady && profileHasSequences());
+  $("activate-profile").disabled = state.recording || !state.profile || !state.connected || state.profile.id === state.active || state.dirty || (!state.sequencesReady && profileHasSequences());
   $("delete-profile").disabled = !state.profile || !state.connected || state.profile.id === state.active;
   $("add-profile").disabled = !state.connected || !state.layersReady;
   $("rename-profile").disabled = !state.profile || !state.connected || !state.layersReady;
@@ -243,8 +250,27 @@ function renderLayers() {
   }
 }
 
+let sequenceValidationTimer;
+let sequenceValidationId = 0;
+function profileHasSequences() {
+  return !!state.profile?.layers.some(item => item.keys.some(key => ["text", "macro"].includes(key.kind)));
+}
+function validateSequences() {
+  clearTimeout(sequenceValidationTimer);
+  const identifier = ++sequenceValidationId;
+  state.sequencePending = profileHasSequences();
+  state.sequenceError = "";
+  if (!state.sequencePending) return;
+  const body = JSON.stringify(state.profile);
+  sequenceValidationTimer = setTimeout(async () => {
+    try { await api("/api/validate", {method:"POST", body}); }
+    catch (error) { if (identifier === sequenceValidationId) state.sequenceError = error.message; }
+    finally { if (identifier === sequenceValidationId) { state.sequencePending = false; render(); } }
+  }, 200);
+}
 function changed() {
   state.dirty = true;
+  validateSequences();
   render();
 }
 
@@ -269,6 +295,7 @@ async function loadProfile(id) {
     await loadOptions(state.profile.layout || "us");
     state.selected = 0;
     state.dirty = false;
+    validateSequences();
     if (layer().lighting.mode === "static") state.lastColors = [...layer().lighting.colors];
     tell("");
     render();
@@ -281,6 +308,7 @@ async function startup() {
   const status = await api("/api/status");
   state.connected = status.connected;
   state.layersReady = !!status.layersReady;
+  state.sequencesReady = !!status.sequencesReady;
   state.selectedPort = status.selectedPort;
   if (status.connected) {
     try {
@@ -405,6 +433,8 @@ $("action-kind").addEventListener("change", (event) => {
   const action = kind === "keyboard"
     ? { kind, usage: 4, modifiers: 0 }
     : kind === "media" ? { kind, usage: 4 }
+      : kind === "text" ? { kind, text: "" }
+      : kind === "macro" ? { kind, steps: [] }
       : kind === "layer" ? { kind, target: state.profile.layers.find((item) => item.id !== state.layerId).id, mode: "toggle" }
         : { kind };
   if (!reserveTarget(action)) { render(); return; }
@@ -609,6 +639,7 @@ $("refresh-ports").addEventListener("click", async () => {
     const status = await api("/api/status");
     state.connected = status.connected;
     state.layersReady = !!status.layersReady;
+  state.sequencesReady = !!status.sequencesReady;
     if (status.connected) await refresh(state.profile?.id);
     else tell(status.message, true);
     render();

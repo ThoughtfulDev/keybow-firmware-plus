@@ -6,9 +6,9 @@ The 12-key Keybow needs one SD card installation to enable the desktop editor an
 
 ## One-time SD card installation
 
-1. Download `keybow-firmware-plus-firmware-v0.0.1-sdcard.zip` from the [`firmware-v0.0.1` GitHub release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/firmware-v0.0.1). Choose the **SD card ZIP**, not the companion `-update.json` file or a desktop app package. Back up every file on your current card before changing it.
+1. Download `keybow-firmware-plus-firmware-v0.0.2-sdcard.zip` from the [`firmware-v0.0.2` GitHub release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/firmware-v0.0.2). Choose the **SD card ZIP**, not the companion `-update.json` file or a desktop app package. Back up every file on your current card before changing it.
 2. Extract the ZIP to a folder on your computer. It includes `kernel.img`, `initrd`, and the other files that belong at the **root** of a FAT32 micro-SD card, not inside an extra folder.
-3. Install the files using the case below, then eject the card, insert it in Keybow, and reconnect the USB cable. Open the editor; its **Firmware** section should show `0.0.1` for this package.
+3. Install the files using the case below, then eject the card, insert it in Keybow, and reconnect the USB cable. Open the editor; its **Firmware** section should show `0.0.2` for this package.
 
 ### Fresh card
 
@@ -25,6 +25,12 @@ Connect Keybow with a USB data cable and open the desktop editor. In **Firmware*
 The editor verifies the release package, backs up all profiles and the active selection on your computer, sends the runtime files over USB, and checks them again after reconnecting. If a transfer stops before restart, reconnect Keybow and click **Update** again to resume. An app update from a `v…` release replaces only the desktop app; it does not update card firmware or erase profiles.
 
 Profile backups are stored in `~/Library/Application Support/Keybow Editor/firmware-backups` on macOS, `%APPDATA%\Keybow Editor\firmware-backups` on Windows, and `${XDG_DATA_HOME:-~/.local/share}/keybow-editor/firmware-backups` on Linux. Keep the backup until you have tested your keys and lighting.
+
+### Manual runtime update on an upgraded card
+
+If your card already has the USB updater bootstrap, you can also install a runtime release manually. Unplug Keybow, back up the card, and extract the release SD card ZIP to a folder on your computer. Replace `keybow`, `keys.lua`, `keybow.lua`, `default.png`, and `firmware-version` at the card root, plus the shipped files inside `keyboards/` and `patterns/`. Leave the entire `profiles/` directory untouched, including `profiles/active`. Eject the card before reconnecting Keybow.
+
+For this runtime update, keep the existing `initrd`, `kernel.img`, and Raspberry Pi boot files. Do not copy the entire ZIP over an existing card. The companion `-update.json` is for the USB updater and does not need to be copied to the card. Firmware 0.0.2 adds text/macros and ensures profile saves are flushed before reporting success.
 
 ## If an update fails
 

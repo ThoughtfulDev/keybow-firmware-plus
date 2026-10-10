@@ -29,6 +29,16 @@ def sample(root):
 
 
 class FirmwareUpdateTests(unittest.TestCase):
+    def test_c_profile_save_flushes_before_acknowledgement(self):
+        if os.name != "posix" or not shutil.which("cc"):
+            self.skipTest("POSIX C compiler required")
+        with tempfile.TemporaryDirectory() as temp:
+            executable = Path(temp) / "profile-test"
+            subprocess.run(["cc", "-DKEYBOW_UPDATER_TEST", "-I", str(ROOT / "lua-5.4.0/src"),
+                            str(ROOT / "tests/profile_device_test.c"), str(ROOT / "keybow/profiles.c"),
+                            str(ROOT / "keybow/updater.c"), "-lz", "-o", str(executable)], check=True)
+            subprocess.run([str(executable)], check=True)
+
     def test_manifest_rejects_tampering_and_profile_paths(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

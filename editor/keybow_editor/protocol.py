@@ -13,7 +13,7 @@ MAX_PAYLOAD = 16384
 COMMANDS = {"ping": 1, "list": 2, "read": 3, "write": 4, "activate": 5, "delete": 6,
             "update_info": 7, "update_begin": 8, "update_query": 9,
             "update_chunk": 10, "update_verify": 11, "update_apply": 12,
-            "update_reset": 13}
+            "update_reset": 13, "capabilities": 14}
 ERRORS = {
     1: "Invalid profile or request",
     2: "Profile not found",

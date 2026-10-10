@@ -14,6 +14,7 @@ from .layouts import LAYOUTS, characters, host_layout, translate
 from .profile import MEDIA, PRESETS, default_profile, generate_lua, key_options, parse_lua, upgrade, validate
 from .protocol import Device, DeviceError
 from . import firmware_update
+from .sequences import has_sequences
 
 STATIC = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "static"
 DEVICE = Device()
@@ -53,6 +54,15 @@ def layers_ready():
         return DEVICE.request("read", MARKER_ID.encode("ascii")) == MARKER_SOURCE
     except DeviceError:
         return False
+
+
+def sequences_ready():
+    try:
+        return "sequences-v1" in DEVICE.request("capabilities").decode("ascii").splitlines()
+    except DeviceError as exc:
+        if str(exc) == "Invalid profile or request" or "rejected" in str(exc):
+            return False
+        raise
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -98,7 +108,7 @@ class Handler(SimpleHTTPRequestHandler):
             elif path == "/api/status":
                 try:
                     DEVICE.request("ping")
-                    self.json_response({"connected": True, "layersReady": layers_ready(),
+                    self.json_response({"connected": True, "layersReady": layers_ready(), "sequencesReady": sequences_ready(),
                                         "port": getattr(DEVICE, "port_name", None),
                                         "selectedPort": getattr(DEVICE, "selected_port", None)})
                 except DeviceError as exc:
@@ -178,9 +188,14 @@ class Handler(SimpleHTTPRequestHandler):
                 profile = upgrade(self.body_json())
                 if profile["id"] != match.group(1):
                     raise ValueError("Profile ID and URL differ")
+                if has_sequences(profile) and not sequences_ready():
+                    raise ValueError("Update Keybow firmware before saving text or macros")
                 source = generate_lua(profile).encode("utf-8")
                 DEVICE.request("write", profile["id"].encode("ascii") + b"\n" + source)
                 self.json_response(profile)
+            elif method == "post" and path == "/api/validate":
+                profile = upgrade(self.body_json())
+                self.json_response({"sourceBytes": len(generate_lua(profile).encode("utf-8"))})
             elif method == "post" and path == "/api/translate":
                 request = self.body_json()
                 profile = upgrade(request["profile"])
@@ -196,6 +211,9 @@ class Handler(SimpleHTTPRequestHandler):
                 identifier = self.body_json().get("id")
                 if not isinstance(identifier, str) or not re.fullmatch(r"[a-z0-9-]{1,32}", identifier) or identifier == MARKER_ID:
                     raise ValueError("Invalid profile ID")
+                saved = parse_lua(DEVICE.request("read", identifier.encode("ascii")).decode("utf-8"))
+                if has_sequences(saved) and not sequences_ready():
+                    raise ValueError("Update Keybow firmware before activating text or macros")
                 DEVICE.request("activate", identifier.encode("ascii"))
                 self.json_response({"active": identifier})
             elif method == "delete" and (match := ID_PATH.fullmatch(path)):

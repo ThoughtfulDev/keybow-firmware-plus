@@ -417,6 +417,7 @@ int luaUsingFallback(void) {
 }
 
 int luaReload(void) {
+    luaCancelSequence();
     lua_State *previous = L;
     lights_stop();
     L = NULL;
@@ -439,4 +440,12 @@ int luaReload(void) {
     if (previous) lua_close(previous);
     lights_start();
     return 0;
+}
+
+void luaCancelSequence(void) {
+    if (!L) return;
+    lua_getglobal(L, "keybow_cancel_sequence");
+    if (lua_isfunction(L, -1)) {
+        if (lua_pcall(L, 0, 0, 0) != LUA_OK) lua_pop(L, 1);
+    } else lua_pop(L, 1);
 }

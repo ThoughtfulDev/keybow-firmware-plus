@@ -19,7 +19,7 @@
 #define FRAME_OVERHEAD 11
 #define PROFILE_DIR "profiles"
 
-enum { PING = 1, LIST = 2, READ = 3, WRITE = 4, ACTIVATE = 5, DELETE = 6 };
+enum { PING = 1, LIST = 2, READ = 3, WRITE = 4, ACTIVATE = 5, DELETE = 6, CAPABILITIES = 14 };
 enum { OK = 0, INVALID = 1, MISSING = 2, IO_ERROR = 3, RELOAD_ERROR = 4 };
 
 static unsigned char receive_buffer[MAX_PAYLOAD + FRAME_OVERHEAD];
@@ -105,6 +105,9 @@ static int write_active(const unsigned char *id, size_t length) {
         unlink(PROFILE_DIR "/active.tmp");
         return -1;
     }
+    /* The SD card uses FAT: flush directory metadata after the rename too.
+       A successful reply must survive immediate USB power removal. */
+    sync();
     return 0;
 }
 
@@ -115,6 +118,7 @@ static void handle(unsigned char command, const unsigned char *payload, size_t l
     size_t result_length = 0;
     unsigned char status = OK;
 
+    if (command == 8) luaCancelSequence();
     if (update_handle(command, payload, length, result, &result_length, &status)) {
         respond(command, status, status == OK ? result : NULL, status == OK ? result_length : 0);
         return;
@@ -125,6 +129,19 @@ static void handle(unsigned char command, const unsigned char *payload, size_t l
     }
 
     switch (command) {
+    case CAPABILITIES: {
+        if (length) { status = INVALID; break; }
+        unsigned char loader[MAX_PAYLOAD];
+        size_t count = 0;
+        if (!read_file("keys.lua", loader, &count)) {
+            loader[count] = 0;
+            if (strstr((char *)loader, "-- keybow-sequences-v1")) {
+                memcpy(result, "sequences-v1", 12);
+                result_length = 12;
+            }
+        }
+        break;
+    }
     case PING:
         if (length) { status = INVALID; break; }
         memcpy(result, "Keybow 1", 8);
@@ -191,6 +208,9 @@ static void handle(unsigned char command, const unsigned char *payload, size_t l
         } else if (had_old) {
             unlink(backup_path);
         }
+        /* fsync(temp) above only persisted the file before its rename.
+           Persist the final name and backup cleanup (or rollback) as well. */
+        sync();
         break;
     }
     case ACTIVATE: {
@@ -211,6 +231,7 @@ static void handle(unsigned char command, const unsigned char *payload, size_t l
         active_id(current);
         if (strlen(current) == length && !memcmp(current, payload, length)) { status = INVALID; break; }
         if (unlink(path) != 0) status = errno == ENOENT ? MISSING : IO_ERROR;
+        else sync();
         break;
     default:
         status = INVALID;

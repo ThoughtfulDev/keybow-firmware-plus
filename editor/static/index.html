@@ -121,9 +121,39 @@
               <option value="keyboard">Keyboard key</option>
               <option value="media">Media control</option>
               <option value="layer">Switch layer</option>
+              <option value="text">Type text</option>
+              <option value="macro">Macro</option>
               <option value="none">Unassigned</option>
             </select>
           </div>
+          <p class="field-help" id="sequence-upgrade" hidden>Update Keybow firmware to enable text and macros.</p>
+          <div id="text-action" class="field" hidden>
+            <label for="type-text">Text to type</label>
+            <textarea id="type-text" rows="5" placeholder="Enter text, tabs, or newlines" spellcheck="false"></textarea>
+            <p class="field-help">Types once per press, with the editor closed. Match the computer’s input source to this profile and turn Caps Lock off. Only characters supported by that layout can be typed.</p>
+          </div>
+          <section id="macro-action" hidden aria-label="Macro editor">
+            <div class="macro-toolbar">
+              <button id="record-start" type="button" class="secondary">Record</button>
+              <button id="record-stop" type="button" class="secondary" disabled>Stop</button>
+              <button id="record-cancel" type="button" class="text-button" disabled>Cancel</button>
+            </div>
+            <div id="macro-capture" tabindex="0" role="textbox" aria-label="Macro keyboard recorder">Focus here to record. Escape stops recording.</div>
+            <p id="record-status" class="field-help" aria-live="polite">Recording captures keys in this field only. System shortcuts may need manual entry.</p>
+            <p id="macro-count" class="field-help"></p>
+            <ol id="macro-events"></ol>
+            <div class="macro-toolbar">
+              <label for="macro-insert-kind">Add event</label>
+              <select id="macro-insert-kind">
+                <option value="keyboard">Key shortcut</option><option value="text">Text</option>
+                <option value="media">Media control</option><option value="delay">Delay (ms)</option>
+                <option value="press">Recorded press</option><option value="release">Recorded release</option>
+              </select>
+              <button id="macro-add" type="button" class="secondary">Add</button>
+            </div>
+            <p class="field-help">Runs once per press. Release all recorded keys before inserting text or shortcuts. Layer switches cancel playback.</p>
+          </section>
+          <p id="sequence-error" class="field-help error" role="status" aria-live="polite"></p>
           <div class="field" id="key-usage-row">
             <label for="key-usage">Key</label>
             <select id="key-usage" disabled></select>
@@ -189,6 +219,7 @@
     </main>
   </div>
   <script src="/color.js" defer></script>
+  <script src="/sequences.js" defer></script>
   <script src="/app.js" defer></script>
 </body>
 </html>

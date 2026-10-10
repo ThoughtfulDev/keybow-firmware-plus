@@ -2,7 +2,7 @@
 
 [← Keybow Firmware Plus](../README.md) · [Firmware installation](firmware-update.md) · [Editor usage](usage.md)
 
-Start with the [one-time SD card firmware installation](firmware-update.md) for the 12-key Keybow. Then download the desktop app from the [`v0.0.1` Keybow Editor release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/v0.0.1). Editor releases use `v` tags; firmware releases use `firmware-v` tags. The app packages include Python, so you do not need to install it.
+Start with the [one-time SD card firmware installation](firmware-update.md) for the 12-key Keybow. Then download the desktop app from the [`v0.0.2` Keybow Editor release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/v0.0.2). Editor releases use `v` tags; firmware releases use `firmware-v` tags. The app packages include Python, so you do not need to install it.
 
 Choose the file for your computer below. These packages are unsigned, so your operating system may ask you to approve opening them.
 

@@ -13,6 +13,10 @@ static unsigned char incoming[20000], outgoing[20000];
 static size_t in_length, in_offset, out_length;
 static size_t chunk_size = 256;
 static int fail_reload;
+static int sync_count;
+
+/* Observe durability barriers without flushing the test host's disks. */
+void sync(void) { sync_count++; }
 
 int serial_read_bytes(void *target, size_t limit) {
     if (in_offset == in_length) return 0;
@@ -25,6 +29,11 @@ int serial_read_bytes(void *target, size_t limit) {
 }
 
 int serial_write_all(const void *source, size_t length) {
+    const unsigned char *frame = source;
+    if (frame[7] == 0 && (frame[4] == (4 | 0x80) ||
+                         frame[4] == (5 | 0x80) || frame[4] == (6 | 0x80))) {
+        assert(sync_count > 0); /* persistence precedes the successful reply */
+    }
     assert(out_length + length < sizeof(outgoing));
     memcpy(outgoing + out_length, source, length);
     out_length += length;
@@ -48,6 +57,7 @@ static void command(unsigned char op, const char *payload, int bad_crc) {
     size_t length = strlen(payload);
     in_length = 11 + length;
     in_offset = out_length = 0;
+    sync_count = 0;
     memcpy(incoming, "KBW1", 4);
     incoming[4] = op;
     incoming[5] = length & 0xff;
@@ -101,6 +111,15 @@ int main(void) {
     while (in_offset < in_length) profiles_poll();
     assert(!out_length);
 
+    command(14, "", 0);
+    assert(receive_status() == 0 && out_length == 12); /* old loader: no capability */
+    write_text("keys.lua", "-- keybow-sequences-v1\n");
+    command(14, "", 0);
+    assert(receive_status() == 0 && out_length == 24);
+    assert(!memcmp(outgoing + 8, "sequences-v1", 12));
+    command(14, "bad", 0);
+    assert(receive_status() == 1);
+
     command(4, "default\n!bad source", 0);
     assert(receive_status() == 1);
     assert_text("profiles/default.lua", "old source");
@@ -114,6 +133,10 @@ int main(void) {
     assert(receive_status() == 0);
     assert_text("profiles/second.lua", "valid source");
 
+    command(4, "second\nreplacement macro", 0);
+    assert(receive_status() == 0);
+    assert_text("profiles/second.lua", "replacement macro");
+
     command(5, "second", 0);
     assert(receive_status() == 4);
     assert_text("profiles/active", "default");
@@ -122,6 +145,9 @@ int main(void) {
     command(5, "second", 0);
     assert(receive_status() == 0);
     assert_text("profiles/active", "second");
+
+    command(6, "default", 0);
+    assert(receive_status() == 0);
 
     command(6, "second", 0);
     assert(receive_status() == 1);
@@ -132,3 +158,5 @@ int main(void) {
     puts("device profile protocol: OK");
     return 0;
 }
+
+void luaCancelSequence(void) {}

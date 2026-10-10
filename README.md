@@ -1,6 +1,6 @@
 ![Keybow Firmware Plus banner with a lit 12-key Keybow](docs/images/keybow-banner.webp)
 
-**Keybow Firmware Plus** is a fork of [Pimoroni's original Keybow firmware](https://github.com/pimoroni/keybow-firmware) for the **12-key Keybow**. It adds a desktop editor for keys, layers, profiles, and lighting, plus USB firmware updates after a one-time SD card upgrade. These additions have not been verified on Keybow MINI.
+**Keybow Firmware Plus** is a fork of [Pimoroni's original Keybow firmware](https://github.com/pimoroni/keybow-firmware) for the **12-key Keybow**. It adds a desktop editor for keys, text typing, macros, layers, profiles, and lighting, plus USB firmware updates after a one-time SD card upgrade. These additions have not been verified on Keybow MINI.
 
 <details>
 <summary>Editor screenshots</summary>
@@ -23,8 +23,8 @@ Screenshots use a simulated demo profile; no connected Keybow profile was change
 
 ## Install
 
-1. Download the SD card ZIP from the [`firmware-v0.0.1` release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/firmware-v0.0.1). Back up your card and follow the [one-time firmware installation guide](docs/firmware-update.md).
-2. Download the app for your computer from the [`v0.0.1` editor release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/v0.0.1):
+1. Download the SD card ZIP from the [`firmware-v0.0.2` release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/firmware-v0.0.2). Back up your card and follow the [one-time firmware installation guide](docs/firmware-update.md).
+2. Download the app for your computer from the [`v0.0.2` editor release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/v0.0.2):
 
    | Computer | Download | Install |
    | --- | --- | --- |

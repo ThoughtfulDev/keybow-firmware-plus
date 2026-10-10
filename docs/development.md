@@ -23,7 +23,7 @@ $env:PYTHONPATH = (Resolve-Path editor).Path
 .\build\editor-dev-venv\Scripts\python.exe -m keybow_editor.server
 ```
 
-The server binds to `127.0.0.1` and uses a real connected Keybow. Set `KEYBOW_PORT` to a serial port for development if automatic detection selects the wrong one. Saving in this editor writes to the device, so use a test profile when working on a connected Keybow.
+The server binds to `127.0.0.2` and uses a real connected Keybow. Set `KEYBOW_PORT` to a serial port for development if automatic detection selects the wrong one. Saving in this editor writes to the device, so use a test profile when working on a connected Keybow.
 
 ## Run checks
 
@@ -39,7 +39,7 @@ On Windows PowerShell, set `PYTHONPATH` as above and run:
 .\build\editor-dev-venv\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
 ```
 
-The suite covers profile validation, layout translation, serial framing, simulated editor requests, and firmware update behavior. Some tests need `node`, a C compiler, Lua, or POSIX tools and skip when those tools are unavailable. Run the relevant package build on each target OS before releasing; PyInstaller does not cross-compile desktop apps.
+The suite covers profile validation, layout translation, serial framing, simulated editor requests, firmware updates, text compilation, recording, and nonblocking sequence playback. Recorder tests run in Node; playback tests run the Lua loader with a fake clock and HID setters. Some tests need `node`, a C compiler, Lua, or POSIX tools and skip when those tools are unavailable. Run the relevant package build on each target OS before releasing; PyInstaller does not cross-compile desktop apps.
 
 ## Code map
 

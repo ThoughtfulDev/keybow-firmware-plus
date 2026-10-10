@@ -5,6 +5,7 @@ import json
 import re
 
 from .layouts import LAYOUTS, canonical, labels
+from .sequences import clean_action as clean_sequence_action, compile_action, has_sequences
 
 MAX_SOURCE = 15000
 PROFILE_ID = re.compile(r"[a-z0-9-]{1,32}\Z")
@@ -72,10 +73,10 @@ def default_profile():
 
 
 def validate(profile):
-    if not isinstance(profile, dict) or profile.get("version") not in (1, 2, 3, 4):
+    if not isinstance(profile, dict) or profile.get("version") not in (1, 2, 3, 4, 5):
         raise ValueError("Unsupported profile version")
     version = profile["version"]
-    if version >= 2 and profile.get("layout") not in (LAYOUTS if version == 4 else ("us", "de")):
+    if version >= 2 and profile.get("layout") not in (LAYOUTS if version >= 4 else ("us", "de")):
         raise ValueError("Unknown keyboard layout")
     identifier = profile.get("id")
     name = profile.get("name")
@@ -96,7 +97,13 @@ def validate(profile):
                 raise ValueError("Invalid layer ID")
             if not isinstance(layer_name, str) or not 1 <= len(layer_name) <= 48 or any(ord(c) < 32 for c in layer_name):
                 raise ValueError("Layer name must be 1–48 printable characters")
-            clean = _validate_contents(layer, allow_layers=True)
+            clean = _validate_contents(layer, allow_layers=True, allow_sequences=version >= 5)
+            for index, action in enumerate(clean["keys"], 1):
+                if action["kind"] in ("text", "macro"):
+                    try:
+                        compile_action(action, profile["layout"])
+                    except ValueError as exc:
+                        raise ValueError(f"{layer_name} key {index:02}: {exc}") from exc
             clean_layers.append({"id": layer_id, "name": layer_name, **clean})
         ids = [layer["id"] for layer in clean_layers]
         if ids[0] != "base" or len(set(ids)) != len(ids):
@@ -120,7 +127,7 @@ def validate(profile):
     return result
 
 
-def _validate_contents(profile, allow_layers):
+def _validate_contents(profile, allow_layers, allow_sequences=False):
     keys = profile.get("keys")
     if not isinstance(keys, list) or len(keys) != 12:
         raise ValueError("A profile needs exactly 12 keys")
@@ -141,6 +148,8 @@ def _validate_contents(profile, allow_layers):
             if type(usage) is not int or not 0 <= usage < len(MEDIA):
                 raise ValueError("Invalid media usage")
             clean_keys.append({"kind": kind, "usage": usage})
+        elif kind in ("text", "macro") and allow_sequences:
+            clean_keys.append(clean_sequence_action(action))
         elif kind == "none":
             clean_keys.append({"kind": kind})
         elif kind == "layer" and allow_layers:
@@ -180,13 +189,15 @@ def upgrade(profile):
     """Convert an old profile in memory; the device changes only on save."""
     profile = validate(profile)
     if profile["version"] < 3:
-        profile = {"version": 4, "id": profile["id"], "name": profile["name"],
+        profile = {"version": 5, "id": profile["id"], "name": profile["name"],
                    "layout": canonical(profile.get("layout", "us")),
                    "layers": [{"id": "base", "name": "Base", "keys": profile["keys"],
                                "lighting": profile["lighting"]}]}
     elif profile["version"] == 3:
-        profile["version"] = 4
+        profile["version"] = 5
         profile["layout"] = canonical(profile["layout"])
+    elif profile["version"] == 4:
+        profile["version"] = 5
     return profile
 
 
@@ -196,7 +207,7 @@ def generate_lua(profile):
         json.dumps(profile, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     ).decode("ascii").rstrip("=")
     if profile["version"] >= 3:
-        lines = [f"-- keybow-profile-v{profile['version']}:{metadata}", "return {version=3,layers={"]
+        lines = [f"-- keybow-profile-v{profile['version']}:{metadata}", f"return {{version={4 if has_sequences(profile) else 3},layers={{"]
         for layer in profile["layers"]:
             lines.append(f'{{id="{layer["id"]}",keys={{')
             for action in layer["keys"]:
@@ -206,6 +217,16 @@ def generate_lua(profile):
                     lines.append(f'{{kind="keyboard",usage={action["usage"]},modifiers={action["modifiers"]}}},')
                 elif action["kind"] == "media":
                     lines.append(f'{{kind="media",usage={action["usage"]}}},')
+                elif action["kind"] in ("text", "macro"):
+                    events = compile_action(action, profile["layout"])
+                    encoded = []
+                    for item in events:
+                        if item["kind"] == "delay":
+                            encoded.append(str(item["ms"]))
+                        else:
+                            device = {"keyboard": 0, "modifier": 1, "media": 2}[item["device"]]
+                            encoded.append(f'{{{device},{item["usage"]},{int(item["pressed"])}}}')
+                    lines.append('{kind="sequence",events={' + ",".join(encoded) + "}},")
                 else:
                     duration = f',seconds={action["seconds"]}' if action["mode"] == "timed" else ""
                     lines.append(f'{{kind="layer",target="{action["target"]}",mode="{action["mode"]}"{duration}}},')
@@ -273,7 +294,7 @@ def generate_lua(profile):
 
 def parse_lua(source):
     first = source.splitlines()[0]
-    match = re.fullmatch(r"-- keybow-profile-v([1234]):([A-Za-z0-9_-]+)", first)
+    match = re.fullmatch(r"-- keybow-profile-v([12345]):([A-Za-z0-9_-]+)", first)
     if not match:
         raise ValueError("This profile was not generated by the visual editor")
     encoded = match.group(2)

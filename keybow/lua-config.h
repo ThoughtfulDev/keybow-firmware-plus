@@ -17,3 +17,5 @@ int luaCallSetup(void);
 int luaReload(void);
 int luaCheckSource(const char *source, size_t length);
 int luaUsingFallback(void);
+
+void luaCancelSequence(void);

@@ -123,6 +123,7 @@ int main() {
 
     while (running){
         profiles_poll();
+        if (update_busy()) luaCancelSequence();
         luaTick();
         updateKeys();
         update_poll_reboot();

@@ -152,6 +152,15 @@ def translate(profile, target):
         groups = (("Profile", result["keys"]),)
     for layer_name, keys in groups:
         for index, action in enumerate(keys, 1):
+            if action["kind"] in ("text", "macro"):
+                try:
+                    from .sequences import compile_action
+                    if action["kind"] == "macro":
+                        action["steps"] = translate_macro(action["steps"], source, target)
+                    compile_action(action, target)
+                except ValueError as exc:
+                    unsupported.append(f"{layer_name} key {index:02} ({exc})")
+                continue
             if action["kind"] != "keyboard":
                 continue
             mask = action["modifiers"]
@@ -194,3 +203,55 @@ def translate(profile, target):
         raise ValueError(f"Cannot preserve {keys} in {LAYOUTS[target]}; change those assignments first")
     result["layout"] = target
     return result
+
+
+def translate_macro(steps, source, target):
+    """Translate recorded chords while preserving delays and overlapping keys.
+
+    Different modifier requirements on overlapping chords are ambiguous and
+    must be edited explicitly rather than silently changing the recording.
+    """
+    from .sequences import event, MAX_EVENTS
+    output, held = [], {}
+    physical_mask = emitted_mask = 0
+
+    def keyboard(action):
+        return translate({"version": 2, "layout": source, "keys": [action]}, target)["keys"][0]
+
+    def set_mask(mask):
+        nonlocal emitted_mask
+        for bit in range(8):
+            if (mask ^ emitted_mask) & (1 << bit):
+                output.append(event("modifier", bit, bool(mask & (1 << bit))))
+        emitted_mask = mask
+
+    for step in steps:
+        if step["kind"] == "keyboard":
+            output.append(keyboard(step))
+        elif step["kind"] != "event":
+            output.append(copy.deepcopy(step))
+        elif step["device"] == "modifier":
+            physical_mask = (physical_mask | (1 << step["usage"])) if step["pressed"] else (physical_mask & ~(1 << step["usage"]))
+            if held and any(item["modifiers"] != item["original_mask"] for item in held.values()):
+                raise ValueError("modifier changes during a translated held chord")
+            set_mask(physical_mask)
+        elif step["device"] == "keyboard":
+            if step["pressed"]:
+                mapped = keyboard({"kind": "keyboard", "usage": step["usage"], "modifiers": physical_mask})
+                if held and (mapped["modifiers"] != emitted_mask or any(item["usage"] == mapped["usage"] for item in held.values())):
+                    raise ValueError("overlapping chords need incompatible modifiers or keys")
+                set_mask(mapped["modifiers"])
+                held[step["usage"]] = {**mapped, "original_mask": physical_mask}
+                output.append(event("keyboard", mapped["usage"], True))
+            else:
+                mapped = held.pop(step["usage"], None)
+                if mapped is None:
+                    raise ValueError("unbalanced recording")
+                output.append(event("keyboard", mapped["usage"], False))
+                if not held:
+                    set_mask(physical_mask)
+        else:
+            output.append(copy.deepcopy(step))
+    if len(output) > MAX_EVENTS:
+        raise ValueError("translated recording exceeds 256 events")
+    return output

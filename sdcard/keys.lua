@@ -1,4 +1,5 @@
 require "keybow"
+-- keybow-sequences-v1
 
 local active_id = "default"
 local file = io.open("profiles/active", "r")
@@ -11,10 +12,42 @@ if file then
 end
 
 local function install_layers(profile)
-    assert(profile.version == 3 and type(profile.layers) == "table")
+    assert((profile.version == 3 or profile.version == 4) and type(profile.layers) == "table")
     local layers = {}
     for _, layer in ipairs(profile.layers) do
         assert(type(layer.id) == "string" and type(layer.keys) == "table" and #layer.keys == 12)
+        for _, action in ipairs(layer.keys) do
+            if action.kind == "sequence" then
+                assert(profile.version == 4 and type(action.events) == "table" and #action.events > 0 and #action.events <= 2048, "Invalid sequence")
+                local down, duration, count = {}, 0, 0
+                for index, item in ipairs(action.events) do
+                    if type(item) == "number" then
+                        item = {ms = item}
+                        action.events[index] = item
+                    else
+                        assert(type(item) == "table", "Invalid sequence event")
+                        -- Compact arrays keep long text within the SD source limit.
+                        assert(#item == 3 and (item[3] == 0 or item[3] == 1), "Invalid compact HID event")
+                        item.device = ({[0] = "keyboard", "modifier", "media"})[item[1]]
+                        item.usage, item.pressed = item[2], item[3] == 1
+                    end
+                    if item.ms ~= nil then
+                        assert(type(item.ms) == "number" and item.ms % 1 == 0 and item.ms >= 0 and item.ms <= 120000, "Invalid delay")
+                        duration = duration + math.max(1, item.ms)
+                    else
+                        local limit = item.device == "keyboard" and 115 or 7
+                        local minimum = item.device == "keyboard" and 4 or 0
+                        assert((item.device == "keyboard" or item.device == "modifier" or item.device == "media") and type(item.usage) == "number" and item.usage % 1 == 0 and item.usage >= minimum and item.usage <= limit and type(item.pressed) == "boolean", "Invalid HID event")
+                        local identity = item.device .. ':' .. item.usage
+                        assert(item.pressed ~= (down[identity] == true), "Unbalanced sequence")
+                        down[identity] = item.pressed and true or nil
+                        if item.device == "keyboard" then count = count + (item.pressed and 1 or -1); assert(count <= 12, "Too many held keys") end
+                        duration = duration + 1
+                    end
+                end
+                assert(next(down) == nil and duration <= 120000, "Invalid sequence end or duration")
+            end
+        end
         layers[layer.id] = layer
     end
     assert(profile.layers[1] and profile.layers[1].id == "base")
@@ -23,6 +56,23 @@ local function install_layers(profile)
     local context = nil
     local physical, suppressed, held = {}, {}, {}
     local key_refs, mod_refs, media_refs = {}, {}, {}
+    local sequence = nil
+    local sequence_down = {}
+    local setters = {keyboard = keybow.set_key, modifier = keybow.set_modifier, media = keybow.set_media_key}
+
+    local function cancel_sequence()
+        sequence = nil
+        for _, device in ipairs({"keyboard", "media", "modifier"}) do
+            for identity, item in pairs(sequence_down) do
+                if item.device == device then
+                    pcall(setters[item.device], item.usage, false)
+                    sequence_down[identity] = nil
+                end
+            end
+        end
+    end
+    keybow_cancel_sequence = cancel_sequence
+
 
     local function change(refs, code, pressed, setter)
         local before = refs[code] or 0
@@ -53,6 +103,18 @@ local function install_layers(profile)
         end
     end
 
+    local function release_physical()
+        for index = 1, 12 do
+            if held[index] then send_action(held[index], false); held[index] = nil end
+            if physical[index] then suppressed[index] = true end
+        end
+    end
+
+    local function start_sequence(action)
+        release_physical()
+        sequence = {events = action.events, index = 1, deadline = keybow_get_millis()}
+    end
+
     local function light(layer)
         local lighting = assert(layer.lighting)
         if lighting.mode == "static" then
@@ -79,10 +141,8 @@ local function install_layers(profile)
             pcall(light, previous)
             return false
         end
-        for index = 1, 12 do
-            if held[index] then send_action(held[index], false); held[index] = nil end
-            if physical[index] then suppressed[index] = true end
-        end
+        cancel_sequence()
+        release_physical()
         active = target
         context = next_context
         return true
@@ -122,7 +182,11 @@ local function install_layers(profile)
                 next_context.deadline = keybow_get_millis() + action.seconds * 1000
             end
             switch_to(action.target, next_context)
-        elseif action.kind == "keyboard" or action.kind == "media" then
+        elseif action.kind == "sequence" then
+            if not sequence then start_sequence(action) end
+        elseif sequence then
+            suppressed[index] = true
+        elseif not sequence and (action.kind == "keyboard" or action.kind == "media") then
             send_action(action, true)
             held[index] = action
         end
@@ -135,6 +199,29 @@ local function install_layers(profile)
     end
     function setup() light(active) end
     function tick(now)
+        if sequence and now >= sequence.deadline then
+            local current = sequence
+            local item = current.events[current.index]
+            if not item then
+                cancel_sequence()
+            else
+                current.index = current.index + 1
+                if item.ms then
+                    current.deadline = now + item.ms
+                else
+                    local setter = setters[item.device]
+                    local identity = item.device .. ':' .. item.usage
+                    if item.pressed then sequence_down[identity] = item end
+                    local ok = setter and pcall(setter, item.usage, item.pressed)
+                    if not ok then
+                        cancel_sequence()
+                    else
+                        sequence_down[identity] = item.pressed and item or nil
+                        current.deadline = now + 1
+                    end
+                end
+            end
+        end
         if context and context.mode == "timed" and now >= context.deadline then
             return_layer()
         end
