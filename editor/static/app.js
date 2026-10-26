@@ -1,11 +1,10 @@
 const $ = (id) => document.getElementById(id);
-// Physical layout with the USB cutout facing away from the user.
-const DISPLAY_ORDER = [11, 8, 5, 2, 10, 7, 4, 1, 9, 6, 3, 0];
 const PRESET_LIGHTS = ["#35a9c1", "#8ab6e3", "#b995d4", "#e6b680", "#86b8a5", "#d498ac", "#a3c77a", "#e9c77c", "#86a9ca", "#9fd1c6", "#e7a491", "#b0aacd"];
 const state = {
   connected: false, layersReady: false, sequencesReady: false, recording: false, sequenceError: "", sequencePending: false, options: null, ports: [], selectedPort: null, ids: [], names: {}, active: null,
   profile: null, layerId: "base", selected: 0, dirty: false, lastColors: null, colorHsv: null, colorKey: null,
   updating: false, firmware: null, latest: null,
+  orientation: 0,
 };
 
 function layer() { return state.profile?.layers.find((item) => item.id === state.layerId); }
@@ -93,11 +92,18 @@ function renderProfiles() {
 
 function renderGrid() {
   const grid = $("key-grid");
+  const view = KeybowOrientation.view(state.orientation);
+  grid.style.gridTemplateColumns = `repeat(${view.columns}, minmax(0, 1fr))`;
+  document.querySelector(".keybow-device").dataset.orientation = String(view.angle);
+  $("rotate-view").textContent = `Rotate view · ${view.angle}°`;
+  $("rotate-view").setAttribute("aria-label", `Rotate view clockwise by 90 degrees; current angle ${view.angle} degrees`);
+  $("orientation-caption").textContent = `USB cutout at ${view.edge} · ${view.angle}°`;
   grid.replaceChildren();
-  for (const index of DISPLAY_ORDER) {
+  for (const index of view.order) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "key";
+    button.dataset.keyIndex = String(index);
     button.style.setProperty("--key-light", layer()?.lighting.mode === "static"
       ? layer().lighting.colors[index] : PRESET_LIGHTS[index]);
     button.disabled = !state.profile;
@@ -659,4 +665,25 @@ $("serial-port").addEventListener("change", async (event) => {
   } catch (error) { event.target.value = previous; tell(error.message, true); }
 });
 
-startup().catch((error) => tell(error.message, true));
+let preferenceSave = Promise.resolve();
+$("rotate-view").addEventListener("click", () => {
+  state.orientation = (state.orientation + 90) % 360;
+  try { KeybowOrientation.write(localStorage, state.orientation); } catch (_) { /* Storage blocked. */ }
+  renderGrid();
+  const orientation = state.orientation;
+  // Serialize rapid clicks so an older request cannot overwrite the final angle.
+  preferenceSave = preferenceSave.catch(() => {}).then(() => api("/api/preferences", {
+    method: "PUT", body: JSON.stringify({orientation}),
+  })).catch(() => tell("View rotated. Could not remember it for the next launch.", true));
+});
+
+async function initialize() {
+  try { state.orientation = KeybowOrientation.read(localStorage); } catch (_) { /* Storage blocked. */ }
+  try {
+    const preference = await api("/api/preferences");
+    if (KeybowOrientation.valid(preference.orientation)) state.orientation = preference.orientation;
+  } catch (_) { /* Retain the browser cache if local preferences are unavailable. */ }
+  renderGrid();
+  await startup();
+}
+initialize().catch((error) => tell(error.message, true));

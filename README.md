@@ -24,7 +24,7 @@ Screenshots use a simulated demo profile; no connected Keybow profile was change
 ## Install
 
 1. Download the SD card ZIP from the [`firmware-v0.0.2` release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/firmware-v0.0.2). Back up your card and follow the [one-time firmware installation guide](docs/firmware-update.md).
-2. Download the app for your computer from the [`v0.0.2` editor release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/v0.0.2):
+2. Download the app for your computer from the [`v0.0.3` editor release](https://github.com/ThoughtfulDev/keybow-firmware-plus/releases/tag/v0.0.3):
 
    | Computer | Download | Install |
    | --- | --- | --- |

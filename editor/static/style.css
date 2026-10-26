@@ -83,6 +83,24 @@ p { color: var(--muted); line-height: 1.45; }
 .color-mark { display: none; }
 .case-mark { color: #899ba0; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .11em; padding-top: 17px; }
 .board-caption { display: flex; justify-content: space-between; color: #8a9391; font-size: 12px; margin: 10px 2px 31px; }
+.board-head { gap: 12px; flex-wrap: wrap; }
+#rotate-view { white-space: nowrap; }
+/* Reflow physical key positions, keeping their labels and focus order upright. */
+.keybow-device { padding-bottom: 48px; }
+.case-mark { position: absolute; bottom: 16px; left: 50%; padding: 0; transform: translateX(-50%); }
+.keybow-device[data-orientation="90"], .keybow-device[data-orientation="270"] { width: min(100%, 480px); padding: 34px 46px; }
+.keybow-device[data-orientation="180"] { padding: 48px 34px 46px; }
+.keybow-device[data-orientation="90"] .usb-cutout { left: calc(100% - 2px); top: 50%; transform: translate(-50%, -50%) rotate(90deg); }
+.keybow-device[data-orientation="180"] .usb-cutout { left: 50%; top: calc(100% - 2px); transform: translate(-50%, -50%) rotate(180deg); }
+.keybow-device[data-orientation="270"] .usb-cutout { left: 2px; top: 50%; transform: translate(-50%, -50%) rotate(270deg); }
+.keybow-device[data-orientation="90"] .screw-left { left: auto; right: 18px; }
+.keybow-device[data-orientation="90"] .screw-right { top: auto; bottom: 18px; }
+.keybow-device[data-orientation="180"] .device-screw { top: auto; bottom: 18px; }
+.keybow-device[data-orientation="270"] .screw-right { right: auto; left: 18px; }
+.keybow-device[data-orientation="270"] .screw-left { top: auto; bottom: 18px; }
+.keybow-device[data-orientation="90"] .case-mark { left: 18px; top: 50%; bottom: auto; transform: translate(-50%, -50%) rotate(90deg); }
+.keybow-device[data-orientation="180"] .case-mark { top: 16px; bottom: auto; transform: translateX(-50%) rotate(180deg); }
+.keybow-device[data-orientation="270"] .case-mark { left: calc(100% - 18px); top: 50%; bottom: auto; transform: translate(-50%, -50%) rotate(270deg); }
 .lighting { border-top: 1px solid #e2e5e0; padding-top: 23px; }
 .field-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 17px; }
 .field-row label { color: #4d5964; }
@@ -131,6 +149,10 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   .board-panel, .inspector { padding: 18px; }
   .device-stage { min-height: 0; padding: 21px 6px; }
   .keybow-device { padding: 31px 16px 14px; border-radius: 17px; }
+  .keybow-device[data-orientation="0"] { padding-bottom: 36px; }
+  .keybow-device[data-orientation="90"], .keybow-device[data-orientation="270"] { padding: 18px 34px; }
+  .keybow-device[data-orientation="180"] { padding: 36px 16px 31px; }
+  .board-caption { gap: 12px; flex-wrap: wrap; }
   .key-grid { gap: 7px; }
   .key { min-height: 76px; padding: 7px; border-radius: 7px; }
   .key-label { font-size: 10px; }

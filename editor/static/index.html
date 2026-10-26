@@ -61,11 +61,12 @@
 
       <div class="workspace">
         <section class="board-panel" aria-labelledby="board-title">
-          <div class="section-head">
+          <div class="section-head board-head">
             <div>
               <h2 id="board-title">Your Keybow</h2>
-              <p>USB cutout faces away from you. Select a key to edit it.</p>
+              <p>Select a key to edit it.</p>
             </div>
+            <button id="rotate-view" type="button" class="secondary" aria-label="Rotate view clockwise by 90 degrees">Rotate view · 0°</button>
           </div>
           <div class="device-stage">
             <div class="keybow-device">
@@ -76,7 +77,7 @@
               <div class="case-mark">KEYBOW</div>
             </div>
           </div>
-          <div class="board-caption"><span>Front edge</span><span>12 illuminated keys</span></div>
+          <div class="board-caption"><span id="orientation-caption" role="status">USB cutout at top · 0°</span><span>12 illuminated keys</span></div>
           <div class="lighting">
             <div class="section-head">
               <div>
@@ -220,6 +221,7 @@
   </div>
   <script src="/color.js" defer></script>
   <script src="/sequences.js" defer></script>
+  <script src="/orientation.js" defer></script>
   <script src="/app.js" defer></script>
 </body>
 </html>

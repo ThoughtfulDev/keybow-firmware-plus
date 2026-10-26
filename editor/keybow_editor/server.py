@@ -14,6 +14,7 @@ from .layouts import LAYOUTS, characters, host_layout, translate
 from .profile import MEDIA, PRESETS, default_profile, generate_lua, key_options, parse_lua, upgrade, validate
 from .protocol import Device, DeviceError
 from . import firmware_update
+from . import preferences
 from .sequences import has_sequences
 
 STATIC = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "static"
@@ -97,7 +98,9 @@ class Handler(SimpleHTTPRequestHandler):
         url = urlsplit(self.path)
         path = url.path
         try:
-            if path == "/api/options":
+            if path == "/api/preferences":
+                self.json_response(preferences.read())
+            elif path == "/api/options":
                 layout = parse_qs(url.query).get("layout", ["us"])[0]
                 self.json_response({"layout": layout, "layouts": LAYOUTS,
                                     "hostLayout": host_layout(),
@@ -162,6 +165,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         path = urlsplit(self.path).path
         try:
+            if method == "put" and path == "/api/preferences":
+                self.json_response(preferences.write(self.body_json()))
+                return
             if method == "post" and path == "/api/firmware/update":
                 tag = self.body_json().get("tag")
                 if not isinstance(tag, str) or not firmware_update.TAG.fullmatch(tag):
@@ -223,7 +229,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.json_response({"deleted": match.group(1)})
             else:
                 self.json_response({"error": "Unknown action"}, 404)
-        except (DeviceError, ValueError, UnicodeError, AttributeError, KeyError, TypeError) as exc:
+        except (DeviceError, ValueError, UnicodeError, AttributeError, KeyError, TypeError, OSError) as exc:
             self.json_response({"error": str(exc)}, 400)
 
 

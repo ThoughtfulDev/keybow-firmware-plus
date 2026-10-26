@@ -404,16 +404,16 @@ class EditorFlowTests(unittest.TestCase):
                     return b""
                 raise AssertionError(command)
 
-        def request(method, path, body=None):
+        def request(method, path, body=None, port=8765):
             client, endpoint = socket.socketpair()
             data = b"" if body is None else json.dumps(body).encode()
-            headers = (f"{method} {path} HTTP/1.1\r\nHost: 127.0.0.1:8765\r\n"
-                       f"Origin: http://127.0.0.1:8765\r\nContent-Length: {len(data)}\r\n"
+            headers = (f"{method} {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n"
+                       f"Origin: http://127.0.0.1:{port}\r\nContent-Length: {len(data)}\r\n"
                        "Connection: close\r\n\r\n").encode()
             try:
                 client.sendall(headers + data)
                 client.shutdown(socket.SHUT_WR)
-                server.Handler(endpoint, ("127.0.0.1", 0), SimpleNamespace(server_port=8765))
+                server.Handler(endpoint, ("127.0.0.1", 0), SimpleNamespace(server_port=port))
                 endpoint.close()
                 response = bytearray()
                 while chunk := client.recv(65536):
@@ -427,6 +427,15 @@ class EditorFlowTests(unittest.TestCase):
         original = server.DEVICE
         server.DEVICE = FakeDevice()
         try:
+            # View preferences are available even without any device connection.
+            with tempfile.TemporaryDirectory() as folder, \
+                 patch.object(server.preferences, "path", return_value=Path(folder) / "preferences.json"), \
+                 patch.object(server.DEVICE, "request", side_effect=AssertionError("Unexpected USB request")):
+                self.assertEqual(request("GET", "/api/preferences"), {"orientation": 0})
+                self.assertEqual(request("PUT", "/api/preferences", {"orientation": 90}), {"orientation": 90})
+                self.assertEqual(request("GET", "/api/preferences"), {"orientation": 90})
+                self.assertEqual(request("GET", "/api/preferences", port=8766), {"orientation": 90})
+                self.assertIn("error", request("PUT", "/api/preferences", {"orientation": 45}))
             current = request("GET", "/api/profiles/default")
             self.assertEqual((current["version"], current["layout"]), (5, "us"))
             self.assertTrue(request("GET", "/api/status")["layersReady"])

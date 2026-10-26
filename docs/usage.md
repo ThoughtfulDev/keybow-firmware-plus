@@ -12,6 +12,12 @@ Choose **Per-key colors** to set a key with the color wheel, brightness slider, 
 
 Profiles live on Keybow's SD card, not in the desktop app. You can open the editor on another supported computer and read the same profiles from the connected device.
 
+## Rotate the device view
+
+Click **Rotate view** beside **Your Keybow** to turn the illustration clockwise in 90° steps. Key numbers, assignments, colors, and the selected key stay attached to the same physical keys. The USB cutout and caption show the current orientation; labels remain upright.
+
+The editor remembers this view on your computer across profiles and restarts, including when Keybow is disconnected. Rotation does not change profiles or send anything to Keybow, and requires no firmware update.
+
 ## Layers
 
 Each profile has a base layer and can have up to three more named layers. Add a layer, then assign a key to **Switch layer**. Choose **Toggle** to stay on the target layer until pressing the same physical key again, **While held** to return on release, or **Return after a delay** for a timed return of 1–3600 seconds. A toggle's target-layer key is reserved for return and cannot run another action. A later layer switch cancels an earlier timer. Keybow starts on the base layer after reconnecting.
